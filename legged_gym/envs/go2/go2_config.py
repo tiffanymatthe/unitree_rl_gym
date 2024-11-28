@@ -20,6 +20,9 @@ class GO2RoughCfg( LeggedRobotCfg ):
             'RR_calf_joint': -1.5,    # [rad]
         }
 
+    class env(LeggedRobotCfg.env):
+        num_observations = 48 - 3 - 3
+
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
