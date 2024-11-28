@@ -42,6 +42,11 @@ Stephen Brawner (brawner@gmail.com)
       </geometry>
     </collision>
   </link>
+  <!-- <joint name="base_to_world" type="fixed">
+    <parent link="world"/>
+    <child link="base"/>
+    <origin xyz="0 0 1" rpy="0 0 0"/>
+  </joint> -->
   <link
     name="Head_upper">
     <inertial>
