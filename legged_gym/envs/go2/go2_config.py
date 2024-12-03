@@ -74,6 +74,8 @@ class GO2RoughCfg( LeggedRobotCfg ):
             feet_contact_forces = 0
             torques = -0.0002
             dof_pos_limits = -10.0
+            dof_vel = -1e-4
+            dof_acc = -2.5e-7
             FR = 4
 
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
