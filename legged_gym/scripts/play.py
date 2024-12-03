@@ -39,10 +39,10 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
-    for i in range(10*int(env.max_episode_length)):
+    for i in range(int(env.max_episode_length)):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
-        # print(obs)
+        print(obs)
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
