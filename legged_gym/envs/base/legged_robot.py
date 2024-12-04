@@ -731,5 +731,12 @@ class LeggedRobot(BaseTask):
         # reward front right leg (thigh) to move to exactly 2 radians
         # ['FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint', 'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint', 'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint', 'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint']
         actual = self.dof_pos[:]
-        error = torch.sum(torch.square(self.target_dof_pos - actual), dim=1)
+        rate = 10 * np.pi / 180 # rad / s
+        # print(f"episode length buf: {self.episode_length_buf} and {self.episode_length_buf * self.dt * rate}")
+        alpha = self.episode_length_buf * self.dt * rate
+        alpha = 1 - torch.abs((alpha % 2) - 1)
+        alphas = torch.zeros((alpha.shape[0],self.target_dof_pos.shape[0]), device=self.device)
+        alphas[:,4] = alpha
+        target = self.target_dof_pos * alphas + self.default_dof_pos * (1-alphas)
+        error = torch.sum(torch.square(target - actual), dim=1)
         return torch.exp(-error / self.cfg.rewards.tracking_sigma / self.num_dofs)

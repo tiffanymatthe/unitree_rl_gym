@@ -27,9 +27,12 @@ def play(args):
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
+    env.max_episode_length = int(env.max_episode_length / 4)
     obs = env.get_observations()
     # load policy
     train_cfg.runner.resume = True
+    # print(args)
+    # print(train_cfg)
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
     
@@ -39,10 +42,10 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
-    for i in range(int(env.max_episode_length)):
+    for i in range(10 * int(env.max_episode_length)):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
-        print(obs)
+        # print(obs)
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
