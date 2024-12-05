@@ -1,8 +1,14 @@
+import isaacgym
+from legged_gym.envs import * # required to prevent circular imports
 from legged_gym.utils import get_args, task_registry
+from rsl_rl.modules import ActorCritic
+
 import torch
 import time
 import torch.nn.functional as F
-from rsl_rl.modules import ActorCritic
+
+# python3 legged_gym/scripts/bc.py
+# python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning
 
 NUM_EPOCHS = 500
 BATCH_SIZE = 20000
@@ -18,6 +24,8 @@ def load_model(model_path, num_obs, device="cuda:0"):
             activation='elu',
             init_noise_std=1.0
         )
+    
+    model.to(device)
 
     if model_path is not None:
         model.load_state_dict(torch.load(model_path, map_location=torch.device(device))['model_state_dict'])
@@ -27,50 +35,51 @@ def load_model(model_path, num_obs, device="cuda:0"):
 def train(args):
     env, env_cfg = task_registry.make_env(name=args.task, args=args)
     # env1, env_cfg1 = task_registry.make_env(name=args.task1, args=args)
-
-    obs_shape = env.observation_space.shape
-    obs_shape = (obs_shape[0]-3, *obs_shape[1:])
-    obs_dim = obs_shape[0]
-    act_dim = env.action_space.shape[0]
-
-    num_steps = BATCH_SIZE // args.num_processes
-    num_processes = args.num_processes
+    obs_shape = (48,)
+    obs_dim = 48
+    act_dim = 12
+    
+    num_processes = 4096
+    num_steps = BATCH_SIZE // num_processes + 1
 
     buffer_observations = torch.zeros(
-        num_steps + 1, num_processes, *obs_shape, device=args.device
+        num_steps + 1, num_processes, *obs_shape, device="cpu"
     )
-    buffer_actions = torch.zeros(num_steps, num_processes, act_dim, device=args.device)
-    buffer_values = torch.zeros(num_steps, num_processes, 1, device=args.device)
+    buffer_actions = torch.zeros(num_steps, num_processes, act_dim, device="cpu")
+    buffer_values = torch.zeros(num_steps, num_processes, 1, device="cpu")
 
-    actor_critic = load_model(model_path="logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt", num_obs=48, device=args.device)
-    student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.device)
+    actor_critic = load_model(model_path="logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt", num_obs=48, device=args.rl_device)
+    student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
 
-    obs = env.reset()
-    buffer_observations[0].copy_(torch.from_numpy(obs[3:]))
+    obs = env.reset()[0]
+    buffer_observations[0].copy_(obs.to("cpu"))
 
     start = time.time()
     for epoch in range(NUM_EPOCHS):
         with torch.no_grad():
+            buffer_observations[0].copy_(buffer_observations[-1])
             for step in range(num_steps):
-                _, stochastic_action, _ = actor_critic.act(
-                    buffer_observations[step], deterministic=False
+                stochastic_action = actor_critic.act(
+                    buffer_observations[step].to(args.rl_device)
                 )
-                value, action, _ = actor_critic.act(
-                    buffer_observations[step], deterministic=True
+                action = actor_critic.act_inference(
+                    buffer_observations[step].to(args.rl_device)
                 )
+                value = actor_critic.evaluate(buffer_observations[step].to(args.rl_device))
+
                 cpu_actions = stochastic_action #.cpu().numpy()
 
-                obs, _, _, _ = env.step(cpu_actions)
+                obs, _, _, _, _ = env.step(cpu_actions)
 
-                buffer_observations[step + 1].copy_(torch.from_numpy(obs[3:]))
-                buffer_actions[step].copy_(action)
-                buffer_values[step].copy_(value)
+                buffer_observations[step + 1].copy_(obs.to("cpu"))
+                buffer_actions[step].copy_(action.to("cpu"))
+                buffer_values[step].copy_(value.to("cpu"))
 
         num_mini_batch = BATCH_SIZE // MINI_BATCH_SIZE
         shuffled_indices = torch.randperm(
-            num_mini_batch * args.mini_batch_size, generator=None, device=args.device
+            num_mini_batch * MINI_BATCH_SIZE, generator=None, device="cpu"
         )
         shuffled_indices_batch = shuffled_indices.view(num_mini_batch, -1)
 
@@ -78,21 +87,20 @@ def train(args):
         actions_shaped = buffer_actions.view(-1, act_dim)
         values_shaped = buffer_values.view(-1, 1)
 
-        ep_action_loss = torch.tensor(0.0, device=args.device).float()
-        ep_value_loss = torch.tensor(0.0, device=args.device).float()
+        ep_action_loss = torch.tensor(0.0, device=args.rl_device).float()
+        ep_value_loss = torch.tensor(0.0, device=args.rl_device).float()
 
         for indices in shuffled_indices_batch:
             optimizer.zero_grad()
-
             observations_batch = observations_shaped[indices]
             actions_batch = actions_shaped[indices]
             values_batch = values_shaped[indices]
 
-            pred_actions = student_actor_critic.actor(observations_batch)
-            pred_values = student_actor_critic.get_value(observations_batch)
+            pred_actions = student_actor_critic.act_inference(observations_batch[:,3:].to("cuda:0"))
+            pred_values = student_actor_critic.evaluate(observations_batch[:,3:].to("cuda:0"))
 
-            action_loss = F.mse_loss(pred_actions, actions_batch)
-            value_loss = F.mse_loss(pred_values, values_batch)
+            action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
+            value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
             (action_loss + value_loss).backward()
 
             optimizer.step()
@@ -105,11 +113,17 @@ def train(args):
         ep_value_loss.div_(L)
 
         elapsed_time = time.time() - start
-        torch.save(student_actor_critic, "logs/behavior_cloning/distilled.pt")
+
+        torch.save({
+            'model_state_dict':student_actor_critic.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'iter': epoch,
+            "infos": None,
+            }, "logs/behavior_cloning/distilled_policy/model_distilled.pt")
 
         print(
             (
-                f"Epoch {epoch+1:4d}/{args.num_epochs:4d} | "
+                f"Epoch {epoch+1:4d}/{NUM_EPOCHS:4d} | "
                 f"Elapsed Time {elapsed_time:8.2f} |"
                 f"Action Loss: {ep_action_loss.item():8.4f} | "
                 f"Value Loss: {ep_value_loss.item():8.2f}"
