@@ -9,6 +9,11 @@ import torch.nn.functional as F
 
 # python3 legged_gym/scripts/bc.py
 # python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning
+# 1034 finished runs, with total avg rewards of 22.570068359375
+
+# for comparison
+# python legged_gym/scripts/play.py --task=go2 --load_run=Dec04_15-02-59_normal_walk
+# 904 finished runs, with total avg rewards of 27.316011428833008
 
 NUM_EPOCHS = 500
 BATCH_SIZE = 20000
@@ -121,6 +126,7 @@ def train(args):
             "infos": None,
             }, "logs/behavior_cloning/distilled_policy/model_distilled.pt")
 
+        # TODO: save in a csv file
         print(
             (
                 f"Epoch {epoch+1:4d}/{NUM_EPOCHS:4d} | "

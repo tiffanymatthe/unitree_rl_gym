@@ -39,9 +39,22 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
-    for i in range(10*int(env.max_episode_length)):
+    all_rews = torch.zeros((100,), device=args.rl_device)
+    avg_rewards = 0
+    num_finishes = 0
+    # TODO: only get rewards for linear velocity tracking
+    for i in range(10 * int(env.max_episode_length)):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
+        all_rews += rews
+        done_rewards = all_rews[dones]
+        if done_rewards.numel() != 0:
+            num_finishes += done_rewards.numel()
+            avg_rewards += torch.sum(done_rewards)
+            # print(done_rewards)
+        all_rews *= ~dones
+
+    print(f"{num_finishes} finished runs, with total avg rewards of {avg_rewards / num_finishes}")
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
