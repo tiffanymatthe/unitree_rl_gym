@@ -11,6 +11,13 @@ from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Log
 import numpy as np
 import torch
 
+import pickle
+
+def save_list_to_pickle(my_list, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(my_list, f)
+    print(f"List saved to {filename}")
+
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -42,10 +49,22 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
+    goals = []
+    for i in range(12):
+        goals.append([])
+
     for i in range(10 * int(env.max_episode_length)):
         actions = policy(obs.detach())
+        for j in range(12):
+            goals[j].append(actions[0][j].detach().cpu().numpy())
+
         obs, _, rews, dones, infos = env.step(actions.detach())
-        # print(obs)
+
+    for i in range(12):
+        goals[i] = np.array(goals[i])
+    print(goals)
+    save_list_to_pickle(goals, 'goals.pkl')
+
 
 if __name__ == '__main__':
     EXPORT_POLICY = True

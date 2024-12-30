@@ -11,7 +11,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
 
             'FL_thigh_joint': 0.8,     # [rad]
             'RL_thigh_joint': 1.,   # [rad]
-            'FR_thigh_joint': -1,     # [rad]
+            'FR_thigh_joint': -1.5,     # [rad]
             'RR_thigh_joint': 1.,   # [rad]
 
             'FL_calf_joint': -1.5,   # [rad]
@@ -73,8 +73,14 @@ class GO2RoughCfg( LeggedRobotCfg ):
             stand_still = 0
             feet_contact_forces = 0
             torques = -0.0002
-            dof_pos_limits = -10.0
-            FR = 4
+            action_rate = -0.01
+            dof_vel = -0.005
+            dof_acc =  -0.000001
+            dof_pos_limits = -30.0
+            FR = 20
+            dof_vel_limits = -0.5
+        
+        soft_dof_vel_limit = 0.02
 
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
