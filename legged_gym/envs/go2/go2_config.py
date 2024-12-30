@@ -57,7 +57,10 @@ class GO2RoughCfg( LeggedRobotCfg ):
             stumble = 0
             stand_still = 0
             # feet_contact_forces = 0
-
+            dof_vel_limits = -0.5
+            
+        soft_dof_vel_limit = 0.02
+        
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
