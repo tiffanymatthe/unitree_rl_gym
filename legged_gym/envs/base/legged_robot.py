@@ -292,8 +292,7 @@ class LeggedRobot(BaseTask):
         Args:
             env_ids (List[int]): Environments ids for which new commands are needed
         """
-        # overwrite to produce either 0 or 1 command (stand up or stand down)
-        self.commands[env_ids, 0] = torch.randint(0, 2, (len(env_ids), 1), device=self.device).float().squeeze(1)
+        self.commands[env_ids, 0] = torch_rand_float(0, 1, (len(env_ids), 1), device=self.device).squeeze(1)
         # self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         # self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         # if self.cfg.commands.heading_command:
@@ -641,7 +640,9 @@ class LeggedRobot(BaseTask):
         # Penalize base height away from target
         base_height = self.root_states[:, 2]
         # height target is 0.42 if standing, and 0.2 if sitting
-        base_height_target = torch.where(self.commands[:, 0] == 1, 0.42, 0.2)
+        stand_height = 0.42
+        sit_height = 0.2
+        base_height_target = sit_height + (stand_height - sit_height) * self.commands[:, 0]
         return torch.square(base_height - base_height_target)
     
     def _reward_torques(self):
