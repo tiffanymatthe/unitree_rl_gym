@@ -21,7 +21,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         }
 
     class env(LeggedRobotCfg.env):
-        num_observations = 48 - 3 - 3
+        num_observations = 48 - 3 - 2
 
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
@@ -47,6 +47,16 @@ class GO2RoughCfg( LeggedRobotCfg ):
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = -0.0002
             dof_pos_limits = -10.0
+            lin_vel_z = 0 # requires base_lin_vel[:,2], don't have
+            # ang_vel_xy = 0 # requires base_ang_vel[:,:2]
+            # orientation = 0 # requires projected_gravity
+            # base_height = 0 # requires base_height_target in rewards (can change)
+            tracking_lin_vel = 0
+            tracking_ang_vel = 0
+            feet_air_time = 0
+            stumble = 0
+            stand_still = 0
+            # feet_contact_forces = 0
 
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
