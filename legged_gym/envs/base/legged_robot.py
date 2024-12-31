@@ -642,7 +642,7 @@ class LeggedRobot(BaseTask):
         # height target is 0.42 if standing, and 0.2 if sitting
         stand_height = 0.42
         sit_height = 0.2
-        base_height_target = sit_height + (stand_height - sit_height) * self.commands[:, 0]
+        base_height_target = stand_height + (sit_height - stand_height) * self.commands[:, 0]
         return torch.square(base_height - base_height_target)
     
     def _reward_torques(self):
