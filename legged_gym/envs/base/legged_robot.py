@@ -179,7 +179,7 @@ class LeggedRobot(BaseTask):
         """
         self.obs_buf = torch.cat((  self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, 0], # 0 or 1
+                                    self.commands[:, :1], # 0 or 1
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
@@ -276,7 +276,7 @@ class LeggedRobot(BaseTask):
             Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
         # 
-        env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0 and self.episode_length_buf != 0).nonzero(as_tuple=False).flatten()
+        env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
         self._resample_commands(env_ids)
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
@@ -635,6 +635,9 @@ class LeggedRobot(BaseTask):
     def _reward_orientation(self):
         # Penalize non flat base orientation
         return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
+
+    def _reward_positive(self):
+        return 1 # used to keep mean rewards >0 o/w rewards clip at 0
 
     def _reward_base_height(self):
         # Penalize base height away from target
