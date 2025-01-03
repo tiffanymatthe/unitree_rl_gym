@@ -56,7 +56,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
             feet_air_time = 0
             stumble = 0
             stand_still = 0
-            positive = 10
+            alive = 10
             # feet_contact_forces = 0
             dof_vel_limits = -0.05
             
