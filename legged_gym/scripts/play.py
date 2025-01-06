@@ -11,11 +11,12 @@ from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Log
 import numpy as np
 import torch
 
+NUM_ENVS = 1
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 100)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, NUM_ENVS)
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
@@ -25,22 +26,22 @@ def play(args):
 
     env_cfg.env.test = True
     
-    # UNCOMMENT WHEN YOU ONLY WANT TO SEE LINEAR VELOCITY TRACKING REWARDS
-    print("ENV CONFIG: removing all rewards except linear velocity tracking")
-    env_cfg.rewards.scales.termination = 0
-    env_cfg.rewards.scales.tracking_ang_vel = 0
-    env_cfg.rewards.scales.lin_vel_z = 0
-    env_cfg.rewards.scales.ang_vel_xy = 0
-    env_cfg.rewards.scales.orientation = 0
-    env_cfg.rewards.scales.torques = 0
-    env_cfg.rewards.scales.dof_vel = 0
-    env_cfg.rewards.scales.dof_acc = 0
-    env_cfg.rewards.scales.base_height = 0 
-    env_cfg.rewards.scales.feet_air_time = 0
-    env_cfg.rewards.scales.collision = 0
-    env_cfg.rewards.scales.feet_stumble = 0 
-    env_cfg.rewards.scales.action_rate = 0
-    env_cfg.rewards.scales.stand_still = 0
+    # # UNCOMMENT WHEN YOU ONLY WANT TO SEE LINEAR VELOCITY TRACKING REWARDS
+    # print("ENV CONFIG: removing all rewards except linear velocity tracking")
+    # env_cfg.rewards.scales.termination = 0
+    # env_cfg.rewards.scales.tracking_ang_vel = 0
+    # env_cfg.rewards.scales.lin_vel_z = 0
+    # env_cfg.rewards.scales.ang_vel_xy = 0
+    # env_cfg.rewards.scales.orientation = 0
+    # env_cfg.rewards.scales.torques = 0
+    # env_cfg.rewards.scales.dof_vel = 0
+    # env_cfg.rewards.scales.dof_acc = 0
+    # env_cfg.rewards.scales.base_height = 0 
+    # env_cfg.rewards.scales.feet_air_time = 0
+    # env_cfg.rewards.scales.collision = 0
+    # env_cfg.rewards.scales.feet_stumble = 0 
+    # env_cfg.rewards.scales.action_rate = 0
+    # env_cfg.rewards.scales.stand_still = 0
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
@@ -56,7 +57,7 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
-    all_rews = torch.zeros((100,), device=args.rl_device)
+    all_rews = torch.zeros((NUM_ENVS,), device=args.rl_device)
     avg_rewards = 0
     num_finishes = 0
     # TODO: only get rewards for linear velocity tracking
