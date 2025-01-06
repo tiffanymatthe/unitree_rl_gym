@@ -4,6 +4,7 @@ from legged_gym.utils import get_args, task_registry
 from rsl_rl.modules import ActorCritic
 
 import torch
+import csv
 import time
 import torch.nn.functional as F
 
@@ -18,6 +19,10 @@ import torch.nn.functional as F
 NUM_EPOCHS = 500
 BATCH_SIZE = 20000
 MINI_BATCH_SIZE = 512
+
+SAVE_PATH = "logs/behavior_cloning/dagger"
+TEACHER_PATH = "logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt"
+NUM_TEACHER_EPOCHS = 1
 
 def load_model(model_path, num_obs, device="cuda:0"):
     model = ActorCritic(
@@ -53,7 +58,7 @@ def train(args):
     buffer_actions = torch.zeros(num_steps, num_processes, act_dim, device="cpu")
     buffer_values = torch.zeros(num_steps, num_processes, 1, device="cpu")
 
-    actor_critic = load_model(model_path="logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt", num_obs=48, device=args.rl_device)
+    actor_critic = load_model(model_path=TEACHER_PATH, num_obs=48, device=args.rl_device)
     student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
@@ -61,20 +66,31 @@ def train(args):
     obs = env.reset()[0]
     buffer_observations[0].copy_(obs.to("cpu"))
 
+    file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
+    writer = csv.writer(file)
+    writer.writerow(["Epoch", "Elapsed Time", "Action Loss", "Value Loss"])
+
     start = time.time()
     for epoch in range(NUM_EPOCHS):
         with torch.no_grad():
             buffer_observations[0].copy_(buffer_observations[-1])
             for step in range(num_steps):
-                stochastic_action = actor_critic.act(
-                    buffer_observations[step].to(args.rl_device)
-                )
                 action = actor_critic.act_inference(
                     buffer_observations[step].to(args.rl_device)
                 )
                 value = actor_critic.evaluate(buffer_observations[step].to(args.rl_device))
 
-                cpu_actions = stochastic_action #.cpu().numpy()
+                # QUESTION: if epoch == 0, should I use action from act_inference (deterministic) or stochastic action?
+                if epoch >= NUM_TEACHER_EPOCHS:
+                    stochastic_action = student_actor_critic.act(
+                        buffer_observations[step,:,3:].to(args.rl_device)
+                    )
+                else:
+                    stochastic_action = actor_critic.act(
+                        buffer_observations[step].to(args.rl_device)
+                    )
+
+                cpu_actions = stochastic_action # if epoch > 0 else action
 
                 obs, _, _, _, _ = env.step(cpu_actions)
 
@@ -124,7 +140,7 @@ def train(args):
             'optimizer_state_dict': optimizer.state_dict(),
             'iter': epoch,
             "infos": None,
-            }, "logs/behavior_cloning/distilled_policy/model_distilled.pt")
+            }, f"{SAVE_PATH}/model.pt")
 
         # TODO: save in a csv file
         print(
@@ -134,6 +150,15 @@ def train(args):
                 f"Action Loss: {ep_action_loss.item():8.4f} | "
                 f"Value Loss: {ep_value_loss.item():8.2f}"
             )
+        )
+
+        writer.writerow(
+            [
+                epoch+1,
+                f"{elapsed_time:8.2f}",
+                f"{ep_action_loss.item():8.4f}",
+                f"{ep_value_loss.item():8.2f}"
+            ]
         )
 
 
