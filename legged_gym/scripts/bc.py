@@ -9,20 +9,24 @@ import time
 import torch.nn.functional as F
 
 # python3 legged_gym/scripts/bc.py
-# python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning
+# python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning  --load_run=distilled_policy
 # 1034 finished runs, with total avg rewards of 22.570068359375
 
+# python3 legged_gym/scripts/bc.py # with dagger new commit
+# python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning --load_run=dagger
+# 922 finished runs, with total avg rewards of 25.417621612548828
+
 # for comparison
-# python legged_gym/scripts/play.py --task=go2 --load_run=Dec04_15-02-59_normal_walk
+# python legged_gym/scripts/play.py --task=go2 --load_run=Dec04_15-02-59_normal_walk 
 # 904 finished runs, with total avg rewards of 27.316011428833008
 
 NUM_EPOCHS = 500
 BATCH_SIZE = 20000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/dagger"
+SAVE_PATH = "logs/behavior_cloning/distill"
 TEACHER_PATH = "logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt"
-NUM_TEACHER_EPOCHS = 1
+NUM_TEACHER_EPOCHS = NUM_EPOCHS + 1
 
 def load_model(model_path, num_obs, device="cuda:0"):
     model = ActorCritic(

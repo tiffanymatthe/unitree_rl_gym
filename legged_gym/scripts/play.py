@@ -24,6 +24,23 @@ def play(args):
     env_cfg.domain_rand.push_robots = False
 
     env_cfg.env.test = True
+    
+    # UNCOMMENT WHEN YOU ONLY WANT TO SEE LINEAR VELOCITY TRACKING REWARDS
+    print("ENV CONFIG: removing all rewards except linear velocity tracking")
+    env_cfg.rewards.scales.termination = 0
+    env_cfg.rewards.scales.tracking_ang_vel = 0
+    env_cfg.rewards.scales.lin_vel_z = 0
+    env_cfg.rewards.scales.ang_vel_xy = 0
+    env_cfg.rewards.scales.orientation = 0
+    env_cfg.rewards.scales.torques = 0
+    env_cfg.rewards.scales.dof_vel = 0
+    env_cfg.rewards.scales.dof_acc = 0
+    env_cfg.rewards.scales.base_height = 0 
+    env_cfg.rewards.scales.feet_air_time = 0
+    env_cfg.rewards.scales.collision = 0
+    env_cfg.rewards.scales.feet_stumble = 0 
+    env_cfg.rewards.scales.action_rate = 0
+    env_cfg.rewards.scales.stand_still = 0
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
@@ -51,7 +68,6 @@ def play(args):
         if done_rewards.numel() != 0:
             num_finishes += done_rewards.numel()
             avg_rewards += torch.sum(done_rewards)
-            # print(done_rewards)
         all_rews *= ~dones
 
     print(f"{num_finishes} finished runs, with total avg rewards of {avg_rewards / num_finishes}")
