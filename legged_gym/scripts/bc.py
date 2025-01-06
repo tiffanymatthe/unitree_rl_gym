@@ -24,9 +24,9 @@ NUM_EPOCHS = 500
 BATCH_SIZE = 20000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/distill"
+SAVE_PATH = "logs/behavior_cloning/dagger_10"
 TEACHER_PATH = "logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt"
-NUM_TEACHER_EPOCHS = NUM_EPOCHS + 1
+NUM_TEACHER_EPOCHS = 10
 
 def load_model(model_path, num_obs, device="cuda:0"):
     model = ActorCritic(
@@ -63,6 +63,9 @@ def train(args):
     buffer_values = torch.zeros(num_steps, num_processes, 1, device="cpu")
 
     actor_critic = load_model(model_path=TEACHER_PATH, num_obs=48, device=args.rl_device)
+    for param in actor_critic.parameters():
+        param.requires_grad = False
+
     student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
