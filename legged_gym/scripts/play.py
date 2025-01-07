@@ -8,10 +8,11 @@ import isaacgym
 from legged_gym.envs import *
 from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Logger
 
+import pprint
 import numpy as np
 import torch
 
-NUM_ENVS = 1
+NUM_ENVS = 100
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -59,19 +60,45 @@ def play(args):
 
     all_rews = torch.zeros((NUM_ENVS,), device=args.rl_device)
     avg_rewards = 0
+
+    all_lin_vel_errs = torch.zeros((NUM_ENVS,), device=args.rl_device)
+    avg_lin_vel_errs = 0
+
+    all_ang_vel_errs = torch.zeros((NUM_ENVS,), device=args.rl_device)
+    avg_ang_vel_errs = 0
+
     num_finishes = 0
-    # TODO: only get rewards for linear velocity tracking
+    num_terminated_failed = 0
+
     for i in range(10 * int(env.max_episode_length)):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_rews += rews
+        all_lin_vel_errs += infos["metrics"]["lin_vel_xy_error"]
+        all_ang_vel_errs += infos["metrics"]["ang_vel_error"]
         done_rewards = all_rews[dones]
+        done_lin_vel_errs = all_lin_vel_errs[dones]
+        done_ang_vel_errs = all_ang_vel_errs[dones]
         if done_rewards.numel() != 0:
+            num_terminated_failed += torch.sum(infos["metrics"]["terminated_from_contact"])
             num_finishes += done_rewards.numel()
             avg_rewards += torch.sum(done_rewards)
+            done_length = infos["metrics"]["curr_episode_length"][dones]
+            avg_lin_vel_errs += torch.sum(done_lin_vel_errs / done_length)
+            avg_ang_vel_errs += torch.sum(done_ang_vel_errs / done_length)
         all_rews *= ~dones
+        all_lin_vel_errs *= ~dones
+        all_ang_vel_errs *= ~dones
 
-    print(f"{num_finishes} finished runs, with total avg rewards of {avg_rewards / num_finishes}")
+    to_print = {
+        "finished runs": num_finishes,
+        "avg. total episodic rew.": avg_rewards.item() / num_finishes,
+        "avg. xy tracking err. per episode": avg_lin_vel_errs.item() / num_finishes,
+        "avg. angular tracking err. per episode": avg_ang_vel_errs.item() / num_finishes,
+        "percentage of failed episodes": num_terminated_failed.item() / num_finishes
+    }
+
+    pprint.pprint(to_print)
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
