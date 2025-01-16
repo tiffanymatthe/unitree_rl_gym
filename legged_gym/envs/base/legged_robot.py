@@ -179,7 +179,7 @@ class LeggedRobot(BaseTask):
         """
         self.obs_buf = torch.cat((  self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :1], # 0 or 1
+                                    # self.commands[:, :1], # 0 or 1
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions
@@ -276,7 +276,7 @@ class LeggedRobot(BaseTask):
             Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
         # 
-        env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0 and self.episode_length_buf != 0).nonzero(as_tuple=False).flatten()
+        env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
         self._resample_commands(env_ids)
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
@@ -292,7 +292,7 @@ class LeggedRobot(BaseTask):
         Args:
             env_ids (List[int]): Environments ids for which new commands are needed
         """
-        self.commands[env_ids, 0] = torch_rand_float(0, 1, (len(env_ids), 1), device=self.device).squeeze(1)
+        # self.commands[env_ids, 0] = torch_rand_float(0, 1, (len(env_ids), 1), device=self.device).squeeze(1)
         # self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         # self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         # if self.cfg.commands.heading_command:
@@ -645,7 +645,7 @@ class LeggedRobot(BaseTask):
         # height target is 0.42 if standing, and 0.2 if sitting
         stand_height = 0.42
         sit_height = 0.2
-        base_height_target = stand_height + (sit_height - stand_height) * self.commands[:, 0]
+        base_height_target = stand_height #+ (sit_height - stand_height) * self.commands[:, 0]
         return torch.square(base_height - base_height_target)
     
     def _reward_torques(self):

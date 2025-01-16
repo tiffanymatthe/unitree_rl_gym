@@ -3,6 +3,8 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class GO2RoughCfg( LeggedRobotCfg ):
     class init_state( LeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.42] # x,y,z [m]
+        # FL_0,FL_1,FL_2,FR_0,FR_1,FR_2,RL_0,RL_1,RL_2,RR_0,RR_1,RR_2
+        # hip = 0, thigh = 1, calf = 2
         default_joint_angles = { # = target angles [rad] when action = 0.0
             'FL_hip_joint': 0.1,   # [rad]
             'RL_hip_joint': 0.1,   # [rad]
@@ -21,7 +23,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         }
 
     class env(LeggedRobotCfg.env):
-        num_observations = 48 - 3 - 2
+        num_observations = 48 - 3 - 3
 
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
@@ -56,11 +58,11 @@ class GO2RoughCfg( LeggedRobotCfg ):
             feet_air_time = 0
             stumble = 0
             stand_still = 0
-            alive = 10
+            alive = 15
             # feet_contact_forces = 0
-            dof_vel_limits = -0.05
+            dof_vel_limits = -2
             
-        soft_dof_vel_limit = 0.1
+        soft_dof_vel_limit = 0.017395 * 2
         
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
