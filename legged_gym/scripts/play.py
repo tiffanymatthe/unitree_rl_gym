@@ -27,6 +27,7 @@ def play(args):
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
+
     obs = env.get_observations()
     # load policy
     train_cfg.runner.resume = True
@@ -40,8 +41,15 @@ def play(args):
         print('Exported policy as jit script to: ', path)
 
     for i in range(10*int(env.max_episode_length)):
+        if (i % int(env.max_episode_length) == 0):
+            # Additional Randomization
+            for _ in range(20):
+                env.gym.simulate(env.sim)
+
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
+        if (i % int(env.max_episode_length) == 1):
+            input("press to play")
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
