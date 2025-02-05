@@ -38,6 +38,14 @@ class GO2RoughCfg( LeggedRobotCfg ):
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
   
+    class commands( LeggedRobotCfg.commands ):
+        class ranges( LeggedRobotCfg.commands.ranges ):
+            lin_vel_x = [-0.2, 0.2] # min max [m/s]
+            lin_vel_y = [-0.2, 0.2]   # min max [m/s]
+            ang_vel_yaw = [-1, 1]    # min max [rad/s]
+            heading = [-3.14, 3.14]
+
+
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
