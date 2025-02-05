@@ -48,8 +48,8 @@ def play(args):
 
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
-        if (i % int(env.max_episode_length) == 1):
-            input("press to play")
+        # if (i % int(env.max_episode_length) == 1):
+            # input("press to play")
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
