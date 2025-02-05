@@ -52,13 +52,13 @@ class GO2RoughCfg( LeggedRobotCfg ):
             # lin_vel_z = 0 # requires base_lin_vel[:,2], don't have so must be 0 weight
             # ang_vel_xy = 0 # requires base_ang_vel[:,:2], default is -0.05
             # orientation = 0 # requires projected_gravity, it is 0 anyways in base config
-            base_height = -175 # scale might be very off
+            # base_height = -175 # scale might be very off
             # tracking_lin_vel = 0
             # tracking_ang_vel = 0
             # feet_air_time = 0
             # stumble = 0
-            stand_still = -10
-            alive = 15
+            # stand_still = -50
+            alive = 3
             # feet_contact_forces = 0
             dof_vel_limits = -2
             
