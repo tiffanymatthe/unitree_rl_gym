@@ -40,8 +40,16 @@ def play(args):
         print('Exported policy as jit script to: ', path)
 
     for i in range(10*int(env.max_episode_length)):
+        
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
+
+        temp_obs = env.get_obs()
+        # print(temp_obs[3].shape)
+        temp_obs[3] = torch.zeros_like(temp_obs[3])
+        # print(temp_obs[3].shape)
+        # print(torch.cat(temp_obs, dim=-1).shape, obs.shape)
+        obs = torch.cat(temp_obs, dim=-1)
 
 if __name__ == '__main__':
     EXPORT_POLICY = True

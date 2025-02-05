@@ -190,6 +190,17 @@ class LeggedRobot(BaseTask):
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
 
+    def get_obs(self):
+        return [
+                    self.base_lin_vel * self.obs_scales.lin_vel,
+                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                    self.projected_gravity,
+                    self.commands[:, :3] * self.commands_scale,
+                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                    self.dof_vel * self.obs_scales.dof_vel,
+                    self.actions
+                ]
+
     def create_sim(self):
         """ Creates simulation, terrain and evironments
         """
@@ -710,8 +721,11 @@ class LeggedRobot(BaseTask):
         
     def _reward_stand_still(self):
         # Penalize motion at zero commands
-        return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
+        return self._reward_dof_vel().clamp_max(4) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
 
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+
+    def _reward_alive(self):
+        return 1.0
