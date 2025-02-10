@@ -149,7 +149,6 @@ def train(args):
             "infos": None,
             }, f"{SAVE_PATH}/model.pt")
 
-        # TODO: save in a csv file
         print(
             (
                 f"Epoch {epoch+1:4d}/{NUM_EPOCHS:4d} | "
