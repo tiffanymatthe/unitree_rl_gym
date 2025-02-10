@@ -8,14 +8,16 @@ import isaacgym
 from legged_gym.envs import *
 from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Logger
 
+import pprint
 import numpy as np
 import torch
 
+NUM_ENVS = 100
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 100)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, NUM_ENVS)
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
@@ -24,6 +26,23 @@ def play(args):
     env_cfg.domain_rand.push_robots = False
 
     env_cfg.env.test = True
+    
+    # # UNCOMMENT WHEN YOU ONLY WANT TO SEE LINEAR VELOCITY TRACKING REWARDS
+    # print("ENV CONFIG: removing all rewards except linear velocity tracking")
+    # env_cfg.rewards.scales.termination = 0
+    # env_cfg.rewards.scales.tracking_ang_vel = 0
+    # env_cfg.rewards.scales.lin_vel_z = 0
+    # env_cfg.rewards.scales.ang_vel_xy = 0
+    # env_cfg.rewards.scales.orientation = 0
+    # env_cfg.rewards.scales.torques = 0
+    # env_cfg.rewards.scales.dof_vel = 0
+    # env_cfg.rewards.scales.dof_acc = 0
+    # env_cfg.rewards.scales.base_height = 0 
+    # env_cfg.rewards.scales.feet_air_time = 0
+    # env_cfg.rewards.scales.collision = 0
+    # env_cfg.rewards.scales.feet_stumble = 0 
+    # env_cfg.rewards.scales.action_rate = 0
+    # env_cfg.rewards.scales.stand_still = 0
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
@@ -40,7 +59,20 @@ def play(args):
         export_policy_as_jit(ppo_runner.alg.actor_critic, path)
         print('Exported policy as jit script to: ', path)
 
-    for i in range(10*int(env.max_episode_length)):
+    all_rews = torch.zeros((NUM_ENVS,), device=args.rl_device)
+    avg_rewards = 0
+
+    all_lin_vel_errs = torch.zeros((NUM_ENVS,), device=args.rl_device)
+    avg_lin_vel_errs = 0
+
+    all_ang_vel_errs = torch.zeros((NUM_ENVS,), device=args.rl_device)
+    avg_ang_vel_errs = 0
+
+    num_finishes = 0
+    num_terminated_failed = 0
+
+    for i in range(10 * int(env.max_episode_length)):
+
         if (i % int(env.max_episode_length) == 0):
             # Additional Randomization
             for _ in range(20):
@@ -48,8 +80,36 @@ def play(args):
 
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
+
         if (i % int(env.max_episode_length) == 1):
             input("press to play")
+
+        all_rews += rews
+        all_lin_vel_errs += infos["metrics"]["lin_vel_xy_error"]
+        all_ang_vel_errs += infos["metrics"]["ang_vel_error"]
+        done_rewards = all_rews[dones]
+        done_lin_vel_errs = all_lin_vel_errs[dones]
+        done_ang_vel_errs = all_ang_vel_errs[dones]
+        if done_rewards.numel() != 0:
+            num_terminated_failed += torch.sum(infos["metrics"]["terminated_from_contact"])
+            num_finishes += done_rewards.numel()
+            avg_rewards += torch.sum(done_rewards)
+            done_length = infos["metrics"]["curr_episode_length"][dones]
+            avg_lin_vel_errs += torch.sum(done_lin_vel_errs / done_length)
+            avg_ang_vel_errs += torch.sum(done_ang_vel_errs / done_length)
+        all_rews *= ~dones
+        all_lin_vel_errs *= ~dones
+        all_ang_vel_errs *= ~dones
+
+    to_print = {
+        "finished runs": num_finishes,
+        "avg. total episodic rew.": avg_rewards.item() / num_finishes,
+        "avg. xy tracking err. per episode": avg_lin_vel_errs.item() / num_finishes,
+        "avg. angular tracking err. per episode": avg_ang_vel_errs.item() / num_finishes,
+        "percentage of failed episodes": num_terminated_failed.item() / num_finishes
+    }
+
+    pprint.pprint(to_print)
 
 if __name__ == '__main__':
     EXPORT_POLICY = True

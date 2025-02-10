@@ -77,6 +77,14 @@ class LeggedRobot(BaseTask):
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
+
+        # add some more metrics (comment when training if it takes too long)
+        self.extras["metrics"] = {}
+        self.extras["metrics"]["lin_vel_xy_error"] = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+        self.extras["metrics"]["ang_vel_error"] = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
+        self.extras["metrics"]["terminated_from_contact"] = torch.logical_and(self.reset_buf, torch.logical_not(self.time_out_buf))
+        self.extras["metrics"]["curr_episode_length"] = self.episode_length_buf_from_reset
+
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def post_physics_step(self):
@@ -142,6 +150,7 @@ class LeggedRobot(BaseTask):
         self.last_actions[env_ids] = 0.
         self.last_dof_vel[env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
+        self.episode_length_buf_from_reset[env_ids] = torch.clone(self.episode_length_buf[env_ids])
         self.episode_length_buf[env_ids] = 0
         self.reset_buf[env_ids] = 1
         # fill extras

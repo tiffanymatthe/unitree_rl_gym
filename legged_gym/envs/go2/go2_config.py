@@ -79,4 +79,6 @@ class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
         run_name = ''
         experiment_name = 'rough_go2'
 
-  
+class GO2RoughNoLinVelCfg( GO2RoughCfg ):
+    class env (GO2RoughCfg.env ):
+        num_observations = 45
