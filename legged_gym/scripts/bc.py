@@ -24,9 +24,9 @@ NUM_EPOCHS = 500
 BATCH_SIZE = 20000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/dagger_100"
-TEACHER_PATH = "logs/rough_go2/Dec04_15-02-59_normal_walk/model_1050.pt"
-NUM_TEACHER_EPOCHS = 100
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_2"
+TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
+NUM_TEACHER_EPOCHS = 1
 
 def load_model(model_path, num_obs, device="cuda:0"):
     model = ActorCritic(

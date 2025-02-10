@@ -11,6 +11,7 @@ from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Log
 import pprint
 import numpy as np
 import torch
+from tqdm import tqdm
 
 NUM_ENVS = 100
 
@@ -71,7 +72,7 @@ def play(args):
     num_finishes = 0
     num_terminated_failed = 0
 
-    for i in range(10 * int(env.max_episode_length)):
+    for i in tqdm(range(10 * int(env.max_episode_length))):
 
         if (i % int(env.max_episode_length) == 0):
             # Additional Randomization
@@ -81,8 +82,8 @@ def play(args):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
 
-        if (i % int(env.max_episode_length) == 1):
-            input("press to play")
+        # if (i % int(env.max_episode_length) == 1):
+        #     input("press to play")
 
         all_rews += rews
         all_lin_vel_errs += infos["metrics"]["lin_vel_xy_error"]
