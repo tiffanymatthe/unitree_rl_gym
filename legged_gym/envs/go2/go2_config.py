@@ -49,6 +49,14 @@ class GO2RoughCfg( LeggedRobotCfg ):
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = -0.0002
             dof_pos_limits = -10.0
+            alive = 0.1
+            dof_vel_limits = -0.25
+            # feet_air_time = 5
+            # stand_still = 5
+            tracking_lin_vel = 2.5
+            tracking_ang_vel = 1.5
+
+        soft_dof_vel_limit = 0.017395 * 3
         #     lin_vel_z = 0 # requires base_lin_vel[:,2], don't have so must be 0 weight
         #     # ang_vel_xy = 0 # requires base_ang_vel[:,:2], default is -0.05
         #     # orientation = 0 # requires projected_gravity, it is 0 anyways in base config
