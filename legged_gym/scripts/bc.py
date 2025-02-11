@@ -21,10 +21,10 @@ import torch.nn.functional as F
 # 904 finished runs, with total avg rewards of 27.316011428833008
 
 NUM_EPOCHS = 500
-BATCH_SIZE = 20000
+BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_2"
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 NUM_TEACHER_EPOCHS = 1
 
