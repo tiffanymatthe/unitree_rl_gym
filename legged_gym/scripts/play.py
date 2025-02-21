@@ -12,8 +12,9 @@ import pprint
 import numpy as np
 import torch
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
-NUM_ENVS = 100
+NUM_ENVS = 1
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -48,7 +49,10 @@ def play(args):
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
 
+    all_obs = []
+
     obs = env.get_observations()
+    all_obs.append(obs.cpu().numpy())
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
@@ -81,6 +85,7 @@ def play(args):
 
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
+        all_obs.append(obs.cpu().numpy())
 
         # if (i % int(env.max_episode_length) == 1):
         #     input("press to play")
@@ -98,6 +103,34 @@ def play(args):
             done_length = infos["metrics"]["curr_episode_length"][dones]
             avg_lin_vel_errs += torch.sum(done_lin_vel_errs / done_length)
             avg_ang_vel_errs += torch.sum(done_ang_vel_errs / done_length)
+            # plot all obs
+            angular_velocities = [o[0][0:3] for o in all_obs]
+            grav_vectors= [o[0][3:6] for o in all_obs]
+            lin_x_y_yaw_commands = [o[0][6:9] for o in all_obs]
+            dof_positions = [o[0][9:9+12] for o in all_obs]
+            dof_velocities = [o[0][9+12:9+24] for o in all_obs]
+            policy_output_actions = [o[0][9+24:9+36] for o in all_obs]
+            fig, axs = plt.subplots(3, 2 , figsize=(12,8))
+            axs[0, 0].plot(angular_velocities)
+            axs[0, 0].set_title('Angular Velocities')
+
+            axs[0, 1].plot(grav_vectors)
+            axs[0, 1].set_title('Gravitational Vectors')
+
+            axs[1, 0].plot(lin_x_y_yaw_commands)
+            axs[1, 0].set_title('Linear X Y Yaw Commands')
+
+            axs[1, 1].plot(dof_positions)
+            axs[1, 1].set_title('DOF Positions')
+
+            axs[2, 0].plot(dof_velocities)
+            axs[2, 0].set_title('DOF Velocities')
+
+            axs[2, 1].plot(policy_output_actions)
+            axs[2, 1].set_title('Policy Output Actions')
+            plt.show()
+            input("Continue by entering.")
+            all_obs = []
         all_rews *= ~dones
         all_lin_vel_errs *= ~dones
         all_ang_vel_errs *= ~dones
