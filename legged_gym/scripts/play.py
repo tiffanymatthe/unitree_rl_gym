@@ -128,6 +128,44 @@ def play(args):
 
             axs[2, 1].plot(policy_output_actions)
             axs[2, 1].set_title('Policy Output Actions')
+
+            fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
+
+            REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
+            REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
+
+            JOINT_LIMITS = {
+                "FR_0": [-0.837758,0.837758],
+                "FR_1": [-1.5708,3.4907],
+                "FR_2": [-2.7227, -0.83776],
+                "FL_0": [-0.837758,0.837758],
+                "FL_1": [-1.5708,3.4907],
+                "FL_2": [-2.7227, -0.83776],
+                "RR_0": [-0.837758,0.837758],
+                "RR_1": [-0.5236,4.5379],
+                "RR_2": [-2.7227, -0.83776],
+                "RL_0": [-0.837758,0.837758],
+                "RL_1": [-0.5236,4.5379],
+                "RL_2": [-2.7227, -0.83776],
+            }
+
+            for i in range(12):
+                scaled_position = [x[i] / env.obs_scales.dof_pos + env.default_dof_pos[i] for x in dof_positions]
+
+                scaled_action = [x[i] * env.cfg.control.action_scale + env.default_dof_pos[i] for x in policy_output_actions]
+
+                axs1[i].plot(scaled_position, label="position (rad)") # use action_scale
+                axs1[i].plot(scaled_action, label="action (rad)")
+
+                label = REAL_JOINT_LABELS[REAL_TO_SIM[i]]
+
+                axs1[i].axhline(JOINT_LIMITS[label][0], linestyle="--", color="black")
+                axs1[i].axhline(JOINT_LIMITS[label][1], linestyle="--", color="black")
+                
+                axs1[i].set_title(label)
+                if i == 11:
+                    axs1[i].legend()
+
             plt.show()
             input("Continue by entering.")
             all_obs = []
