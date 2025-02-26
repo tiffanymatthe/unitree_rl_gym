@@ -76,6 +76,8 @@ def play(args):
     num_finishes = 0
     num_terminated_failed = 0
 
+    PLOT = True
+
     for i in tqdm(range(10 * int(env.max_episode_length))):
 
         if (i % int(env.max_episode_length) == 0):
@@ -104,70 +106,72 @@ def play(args):
             avg_lin_vel_errs += torch.sum(done_lin_vel_errs / done_length)
             avg_ang_vel_errs += torch.sum(done_ang_vel_errs / done_length)
             # plot all obs
-            angular_velocities = [o[0][0:3] for o in all_obs]
-            grav_vectors= [o[0][3:6] for o in all_obs]
-            lin_x_y_yaw_commands = [o[0][6:9] for o in all_obs]
-            dof_positions = [o[0][9:9+12] for o in all_obs]
-            dof_velocities = [o[0][9+12:9+24] for o in all_obs]
-            policy_output_actions = [o[0][9+24:9+36] for o in all_obs]
-            fig, axs = plt.subplots(3, 2 , figsize=(12,8))
-            axs[0, 0].plot(angular_velocities)
-            axs[0, 0].set_title('Angular Velocities')
+            if PLOT:
+                angular_velocities = [o[0][0:3] for o in all_obs]
+                grav_vectors= [o[0][3:6] for o in all_obs]
+                lin_x_y_yaw_commands = [o[0][6:9] for o in all_obs]
+                dof_positions = [o[0][9:9+12] for o in all_obs]
+                dof_velocities = [o[0][9+12:9+24] for o in all_obs]
+                policy_output_actions = [o[0][9+24:9+36] for o in all_obs]
+                fig, axs = plt.subplots(3, 2 , figsize=(12,8))
+                axs[0, 0].plot(angular_velocities)
+                axs[0, 0].set_title('Angular Velocities')
 
-            axs[0, 1].plot(grav_vectors)
-            axs[0, 1].set_title('Gravitational Vectors')
+                axs[0, 1].plot(grav_vectors)
+                axs[0, 1].set_title('Gravitational Vectors')
 
-            axs[1, 0].plot(lin_x_y_yaw_commands)
-            axs[1, 0].set_title('Linear X Y Yaw Commands')
+                axs[1, 0].plot(lin_x_y_yaw_commands)
+                axs[1, 0].set_title('Linear X Y Yaw Commands')
 
-            axs[1, 1].plot(dof_positions)
-            axs[1, 1].set_title('DOF Positions')
+                axs[1, 1].plot(dof_positions)
+                axs[1, 1].set_title('DOF Positions')
 
-            axs[2, 0].plot(dof_velocities)
-            axs[2, 0].set_title('DOF Velocities')
+                axs[2, 0].plot(dof_velocities)
+                axs[2, 0].set_title('DOF Velocities')
 
-            axs[2, 1].plot(policy_output_actions)
-            axs[2, 1].set_title('Policy Output Actions')
+                axs[2, 1].plot(policy_output_actions)
+                axs[2, 1].set_title('Policy Output Actions')
 
-            fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
+                fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
+                axs1 = axs1.flatten()
 
-            REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
-            REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
+                REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
+                REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
 
-            JOINT_LIMITS = {
-                "FR_0": [-0.837758,0.837758],
-                "FR_1": [-1.5708,3.4907],
-                "FR_2": [-2.7227, -0.83776],
-                "FL_0": [-0.837758,0.837758],
-                "FL_1": [-1.5708,3.4907],
-                "FL_2": [-2.7227, -0.83776],
-                "RR_0": [-0.837758,0.837758],
-                "RR_1": [-0.5236,4.5379],
-                "RR_2": [-2.7227, -0.83776],
-                "RL_0": [-0.837758,0.837758],
-                "RL_1": [-0.5236,4.5379],
-                "RL_2": [-2.7227, -0.83776],
-            }
+                JOINT_LIMITS = {
+                    "FR_0": [-0.837758,0.837758],
+                    "FR_1": [-1.5708,3.4907],
+                    "FR_2": [-2.7227, -0.83776],
+                    "FL_0": [-0.837758,0.837758],
+                    "FL_1": [-1.5708,3.4907],
+                    "FL_2": [-2.7227, -0.83776],
+                    "RR_0": [-0.837758,0.837758],
+                    "RR_1": [-0.5236,4.5379],
+                    "RR_2": [-2.7227, -0.83776],
+                    "RL_0": [-0.837758,0.837758],
+                    "RL_1": [-0.5236,4.5379],
+                    "RL_2": [-2.7227, -0.83776],
+                }
 
-            for i in range(12):
-                scaled_position = [x[i] / env.obs_scales.dof_pos + env.default_dof_pos[i] for x in dof_positions]
+                for i in range(12):
+                    scaled_position = np.array([x[i] / env.obs_scales.dof_pos + env.default_dof_pos[0][i].cpu() for x in dof_positions])
 
-                scaled_action = [x[i] * env.cfg.control.action_scale + env.default_dof_pos[i] for x in policy_output_actions]
+                    scaled_action = np.array([x[i] * env.cfg.control.action_scale + env.default_dof_pos[0][i].cpu() for x in policy_output_actions])
 
-                axs1[i].plot(scaled_position, label="position (rad)") # use action_scale
-                axs1[i].plot(scaled_action, label="action (rad)")
+                    axs1[i].plot(scaled_position, label="position (rad)") # use action_scale
+                    axs1[i].plot(scaled_action, label="action (rad)")
 
-                label = REAL_JOINT_LABELS[REAL_TO_SIM[i]]
+                    label = REAL_JOINT_LABELS[REAL_TO_SIM[i]]
 
-                axs1[i].axhline(JOINT_LIMITS[label][0], linestyle="--", color="black")
-                axs1[i].axhline(JOINT_LIMITS[label][1], linestyle="--", color="black")
-                
-                axs1[i].set_title(label)
-                if i == 11:
-                    axs1[i].legend()
+                    axs1[i].axhline(JOINT_LIMITS[label][0], linestyle="--", color="black")
+                    axs1[i].axhline(JOINT_LIMITS[label][1], linestyle="--", color="black")
+                    
+                    axs1[i].set_title(label)
+                    if i == 11:
+                        axs1[i].legend()
 
-            plt.show()
-            input("Continue by entering.")
+                plt.show()
+                input("Continue by entering.")
             all_obs = []
         all_rews *= ~dones
         all_lin_vel_errs *= ~dones
