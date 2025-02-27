@@ -52,10 +52,12 @@ def play(args):
 
     all_obs = []
     all_velocities = []
+    dof_position_history = []
+    dof_velocity_history = []
 
-    obs = env.get_observations()
-    all_obs.append(obs.cpu().numpy())
-    all_velocities.ppaned(obs[:,0:3].cpu().numpy())
+    # obs = env.get_observations()
+    # all_obs.append(obs.cpu().numpy())
+    # all_velocities.append(obs[:,0:3].cpu().numpy())
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
@@ -63,8 +65,8 @@ def play(args):
 
     estimator_path = None
     estimator = ActorCritic(
-        num_actor_obs=48,
-        num_critic_obs=48,
+        num_actor_obs=48 - 3 + 3 * 2 * 12,
+        num_critic_obs=48 - 3 + 3 * 2 * 12,
         num_actions=3, # linear velocity x y z
         actor_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 128],
@@ -101,12 +103,24 @@ def play(args):
             for _ in range(20):
                 env.gym.simulate(env.sim)
 
-        lin_velocities = estimator(obs.detach()[:,3:]).detach()
+            obs = env.get_observations()
+            all_obs.append(obs.cpu().numpy())
+            all_velocities.append(obs[:,0:3].cpu().numpy())
+
+            dof_position_history = obs[:,12:24].repeat(3)
+            dof_velocity_history = obs[:,24:36].repeat(3)
+
+        lin_velocities = estimator(torch.concatenate(obs.detach()[:,3:], dof_position_history, dof_velocity_history, dim=1)).detach()
         full_obs = torch.concatenate(lin_velocities, obs.detach()[:,3:])
         actions = policy(full_obs)
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
         all_velocities.append(lin_velocities.cpu().numpy())
+
+        dof_position_history = torch.concatenate(dof_position_history, obs.detach()[:,12:24], axis=1)
+        dof_position_history = dof_position_history[:,12:] # remove the first 12, too past
+        dof_velocity_history = torch.concatenate(dof_velocity_history, obs.detach()[:,24:36], axis=1)
+        dof_velocity_history = dof_velocity_history[:,12:]
 
         # if (i % int(env.max_episode_length) == 1):
         #     input("press to play")
