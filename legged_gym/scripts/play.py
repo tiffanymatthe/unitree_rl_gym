@@ -157,6 +157,24 @@ def play(args):
             axs[3, 0].set_title('Linear Velocities (scaled by factor of 2 compared to command)')
             axs[3, 1].set_title('Linear Velocities (scaled by factor of 2 compared to command)')
 
+            fig2, axs2 = plt.subplots(3, 1, figsize=(12,8))
+            axs2 = axs2.flatten()
+            labels = ["vel x","vel y", "vel z"]
+
+            for i in range(3):
+                true_lin_vel = [x[i] / 2 for x in true_linear_velocities]
+                est_lin_vel = [x[i] / 2 for x in estimated_linear_velocities]
+                axs2[i].plot(true_lin_vel, label="true")
+                axs2[i].plot(est_lin_vel, label="est")
+
+                if i < 2:
+                    target_lin_vel = [x[i] for x in lin_x_y_yaw_commands]
+                    axs2[i].plot(target_lin_vel, label="target cmd")
+
+                axs2[i].set_title(labels[i])
+
+            axs2.legend() 
+
             fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
 
             REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
