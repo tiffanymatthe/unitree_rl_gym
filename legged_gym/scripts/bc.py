@@ -24,7 +24,7 @@ NUM_EPOCHS = 500
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_multi_task"
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_multi_task_w10"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 NUM_TEACHER_EPOCHS = 1
 
@@ -75,7 +75,7 @@ def train(args):
 
     file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
     writer = csv.writer(file)
-    writer.writerow(["Epoch", "Elapsed Time", "Action Loss", "Value Loss"])
+    writer.writerow(["Epoch", "Elapsed Time", "Action Loss", "Value Loss", "Action Loss Lin Vel"])
 
     start = time.time()
     for epoch in range(NUM_EPOCHS):
@@ -122,6 +122,7 @@ def train(args):
         values_shaped = buffer_values.view(-1, 1)
 
         ep_action_loss = torch.tensor(0.0, device=args.rl_device).float()
+        ep_action_loss_lin_vel = torch.tensor(0.0, device=args.rl_device).float()
         ep_value_loss = torch.tensor(0.0, device=args.rl_device).float()
 
         for indices in shuffled_indices_batch:
@@ -134,17 +135,20 @@ def train(args):
             pred_actions = student_actor_critic.act_inference(observations_batch[:,3:].to("cuda:0"))
             pred_values = student_actor_critic.evaluate(observations_batch[:,3:].to("cuda:0"))
 
-            action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
+            action_loss = F.mse_loss(pred_actions[:,:-3], actions_batch[:,:-3].to("cuda:0"))
+            action_loss_lin_vel = F.mse_loss(pred_actions[:,-3:], actions_batch[:,-3:].to("cuda:0"))
             value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
-            (action_loss + value_loss).backward()
+            (action_loss + action_loss_lin_vel * 10 + value_loss).backward()
 
             optimizer.step()
 
             ep_action_loss.add_(action_loss.detach())
+            ep_action_loss_lin_vel.add_(action_loss_lin_vel.detach())
             ep_value_loss.add_(value_loss.detach())
 
         L = shuffled_indices_batch.shape[0]
         ep_action_loss.div_(L)
+        ep_action_loss_lin_vel.div_(L)
         ep_value_loss.div_(L)
 
         elapsed_time = time.time() - start
@@ -161,6 +165,7 @@ def train(args):
                 f"Epoch {epoch+1:4d}/{NUM_EPOCHS:4d} | "
                 f"Elapsed Time {elapsed_time:8.2f} |"
                 f"Action Loss: {ep_action_loss.item():8.4f} | "
+                f"Action Loss Lin Vel: {ep_action_loss_lin_vel.item():8.4f} | "
                 f"Value Loss: {ep_value_loss.item():8.2f}"
             )
         )
@@ -170,7 +175,8 @@ def train(args):
                 epoch+1,
                 f"{elapsed_time:8.2f}",
                 f"{ep_action_loss.item():8.4f}",
-                f"{ep_value_loss.item():8.2f}"
+                f"{ep_value_loss.item():8.2f}",
+                f"{ep_action_loss_lin_vel.item():8.4f}",
             ]
         )
 
