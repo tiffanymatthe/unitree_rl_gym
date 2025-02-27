@@ -13,6 +13,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from rsl_rl.modules import ActorCritic
 
 NUM_ENVS = 1
 
@@ -50,13 +51,30 @@ def play(args):
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
 
     all_obs = []
+    all_velocities = []
 
     obs = env.get_observations()
     all_obs.append(obs.cpu().numpy())
+    all_velocities.ppaned(obs[:,0:3].cpu().numpy())
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
+
+    estimator_path = None
+    estimator = ActorCritic(
+        num_actor_obs=48,
+        num_critic_obs=48,
+        num_actions=3, # linear velocity x y z
+        actor_hidden_dims=[256, 128],
+        critic_hidden_dims=[256, 128],
+        activation='elu',
+        init_noise_std=1.0
+    )
+
+    estimator.load_state_dict(torch.load(estimator_path, map_location=torch.device("cuda:0"))['model_state_dict'])
+    for param in estimator.parameters():
+        param.requires_grad = False
     
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
@@ -83,9 +101,12 @@ def play(args):
             for _ in range(20):
                 env.gym.simulate(env.sim)
 
-        actions = policy(obs.detach())
+        lin_velocities = estimator(obs.detach()[:,3:]).detach()
+        full_obs = torch.concatenate(lin_velocities, obs.detach()[:,3:])
+        actions = policy(full_obs)
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
+        all_velocities.append(lin_velocities.cpu().numpy())
 
         # if (i % int(env.max_episode_length) == 1):
         #     input("press to play")
@@ -104,13 +125,15 @@ def play(args):
             avg_lin_vel_errs += torch.sum(done_lin_vel_errs / done_length)
             avg_ang_vel_errs += torch.sum(done_ang_vel_errs / done_length)
             # plot all obs
-            angular_velocities = [o[0][0:3] for o in all_obs]
-            grav_vectors= [o[0][3:6] for o in all_obs]
-            lin_x_y_yaw_commands = [o[0][6:9] for o in all_obs]
-            dof_positions = [o[0][9:9+12] for o in all_obs]
-            dof_velocities = [o[0][9+12:9+24] for o in all_obs]
-            policy_output_actions = [o[0][9+24:9+36] for o in all_obs]
-            fig, axs = plt.subplots(3, 2 , figsize=(12,8))
+            true_linear_velocities = [o[0][0:3] for o in all_obs]
+            estimated_linear_velocities = [o[0][0:3] for o in all_velocities]
+            angular_velocities = [o[0][3:6] for o in all_obs]
+            grav_vectors= [o[0][6:9] for o in all_obs]
+            lin_x_y_yaw_commands = [o[0][9:12] for o in all_obs]
+            dof_positions = [o[0][12:9+12+3] for o in all_obs]
+            dof_velocities = [o[0][9+12+3:9+24+3] for o in all_obs]
+            policy_output_actions = [o[0][9+24+3:9+36+3] for o in all_obs]
+            fig, axs = plt.subplots(4, 2 , figsize=(12,8))
             axs[0, 0].plot(angular_velocities)
             axs[0, 0].set_title('Angular Velocities')
 
@@ -128,6 +151,11 @@ def play(args):
 
             axs[2, 1].plot(policy_output_actions)
             axs[2, 1].set_title('Policy Output Actions')
+
+            axs[3, 0].plot(true_linear_velocities, label="true")
+            axs[3, 1].plot(estimated_linear_velocities, label="estimated")
+            axs[3, 0].set_title('Linear Velocities (scaled by factor of 2 compared to command)')
+            axs[3, 1].set_title('Linear Velocities (scaled by factor of 2 compared to command)')
 
             fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
 
