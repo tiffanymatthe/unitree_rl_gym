@@ -20,13 +20,13 @@ import torch.nn.functional as F
 # python legged_gym/scripts/play.py --task=go2 --load_run=Dec04_15-02-59_normal_walk 
 # 904 finished runs, with total avg rewards of 27.316011428833008
 
-NUM_EPOCHS = 500
+NUM_EPOCHS = 400
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_multi_task_w10"
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_multi_task_w10_teach_epochs_10"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
-NUM_TEACHER_EPOCHS = 1
+NUM_TEACHER_EPOCHS = 10
 
 def load_model(model_path, num_obs, num_actions, device="cuda:0"):
     model = ActorCritic(
