@@ -86,8 +86,8 @@ def play(args):
                 env.gym.simulate(env.sim)
 
         actions = policy(obs.detach())
-        print(actions.shape)
-        obs, _, rews, dones, infos = env.step(actions.detach())
+        obs, _, rews, dones, infos = env.step(actions[:,:-3].detach())
+        print(actions[:,-3:])
         all_obs.append(obs.cpu().numpy())
 
         # if (i % int(env.max_episode_length) == 1):
