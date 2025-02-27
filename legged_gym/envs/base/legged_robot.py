@@ -186,12 +186,12 @@ class LeggedRobot(BaseTask):
     def compute_observations(self):
         """ Computes observations
         """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
+        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel, # 3 [0:3]
+                                    self.base_ang_vel  * self.obs_scales.ang_vel, # 3 [3:6]
+                                    self.projected_gravity, # 3 [6:9]
+                                    self.commands[:, :3] * self.commands_scale, # 3 [9:12]
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos, # 12 [12:24]
+                                    self.dof_vel * self.obs_scales.dof_vel, # 12 [24:36]
                                     self.actions
                                     ),dim=-1)
         # add perceptive inputs if not blind
