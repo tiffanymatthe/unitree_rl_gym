@@ -80,7 +80,7 @@ def train(args):
         param.requires_grad = False
 
     # remove linear velocity (3) but add a history of size 3 of past joint positions and velocities (6)
-    estimator = load_model(model_path=None, num_obs=estimator_obs_dim, device=args.rl_device)
+    estimator = load_estimator_model(model_path=None, num_obs=estimator_obs_dim, device=args.rl_device)
 
     past_joint_positions = torch.zeros(num_processes, 12 * 3, device="cpu")
     past_joint_velocities = torch.zeros(num_processes, 12 * 3, device="cpu")
@@ -89,9 +89,9 @@ def train(args):
 
     obs = env.reset()[0]
     buffer_observations[-1].copy_(obs.to("cpu"))
-    past_joint_positions = obs[:,12:24].repeat(3)
-    past_joint_velocities = obs[:,24:36].repeat(3)
-    est_obs = torch.concatenate(obs[:,3:], past_joint_positions, past_joint_velocities, axis=1)
+    past_joint_positions = obs[:,12:24].repeat(1,3).detach().clone()
+    past_joint_velocities = obs[:,24:36].repeat(1,3).detach().clone()
+    est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
     buffer_estimator_observations[-1].copy_(est_obs.to("cpu"))
 
     file = open(f"{SAVE_PATH}/estimator_results.csv", mode="w", newline='')
@@ -108,17 +108,25 @@ def train(args):
                     buffer_observations[step].to(args.rl_device)
                 )
 
-                obs, priv_obs, _, _, _ = env.step(stochastic_action)
+                obs, priv_obs, _, dones, _ = env.step(stochastic_action)
 
-                est_obs = torch.concatenate(obs[:,3:], past_joint_positions, past_joint_velocities, axis=1)
+                est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
                 buffer_estimator_observations[step + 1].copy_(est_obs.to("cpu"))
                 buffer_observations[step + 1].copy_(obs.to("cpu"))
                 buffer_actions[step].copy_(priv_obs[:,0:3].to("cpu"))
 
-                past_joint_positions = torch.concatenate(past_joint_positions, obs[:,12:24], axis=1)
-                past_joint_positions = past_joint_positions[:,12:] # remove the first 12, too past
-                past_joint_velocities = torch.concatenate(past_joint_velocities, obs[:,24:36], axis=1)
-                past_joint_velocities = past_joint_velocities[:,12:]
+                # if not done, update history
+                # first shift last two to first two to leave a space for the last one
+                past_joint_positions[~dones,:-12].copy_(past_joint_positions[~dones,12:])
+                past_joint_positions[~dones,:12].copy_(obs[~dones,12:24])
+                past_joint_velocities[~dones,:-12].copy_(past_joint_velocities[~dones,12:])
+                past_joint_velocities[~dones,:12].copy_(obs[~dones,24:36])
+
+                # if done, repeat history
+                past_joint_positions[dones].copy_(obs[dones,12:24].repeat(1,3))
+                past_joint_velocities[dones].copy_(obs[dones,24:36].repeat(1,3))
+
+                # print(f"Past joint positions and velocities: {past_joint_positions[0]} and {past_joint_velocities[0]} for step {step} in epoch {epoch}")
 
         num_mini_batch = BATCH_SIZE // MINI_BATCH_SIZE
         shuffled_indices = torch.randperm(
@@ -136,8 +144,8 @@ def train(args):
             optimizer.zero_grad()
             observations_batch = observations_shaped[indices]
             actions_batch = actions_shaped[indices] # get "ground truth" linear velocity (but it contains noise!)
-
-            pred_actions = estimator.act_inference(estimator_observations_shaped.to("cuda:0")) # remove linear velocities
+            estimator_observations_batch = estimator_observations_shaped[indices]
+            pred_actions = estimator.act_inference(estimator_observations_batch.to("cuda:0")) # remove linear velocities
             action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
             action_loss.backward()
 
