@@ -14,7 +14,7 @@ import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-NUM_ENVS = 1
+NUM_ENVS = 10
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -76,7 +76,7 @@ def play(args):
     num_finishes = 0
     num_terminated_failed = 0
 
-    PLOT = True
+    PLOT = False
 
     for i in tqdm(range(10 * int(env.max_episode_length))):
 
@@ -86,6 +86,7 @@ def play(args):
                 env.gym.simulate(env.sim)
 
         actions = policy(obs.detach())
+        print(actions.shape)
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
 

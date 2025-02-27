@@ -24,15 +24,15 @@ NUM_EPOCHS = 500
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch"
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_multi_task"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 NUM_TEACHER_EPOCHS = 1
 
-def load_model(model_path, num_obs, device="cuda:0"):
+def load_model(model_path, num_obs, num_actions, device="cuda:0"):
     model = ActorCritic(
             num_actor_obs=num_obs,
             num_critic_obs=num_obs,
-            num_actions=12,
+            num_actions=num_actions,
             actor_hidden_dims=[512, 256, 128],
             critic_hidden_dims=[512, 256, 128],
             activation='elu',
@@ -51,7 +51,7 @@ def train(args):
     # env1, env_cfg1 = task_registry.make_env(name=args.task1, args=args)
     obs_shape = (48,)
     obs_dim = 48
-    act_dim = 12
+    act_dim = 12 + 3
     
     num_processes = 4096
     num_steps = BATCH_SIZE // num_processes + 1
@@ -62,11 +62,11 @@ def train(args):
     buffer_actions = torch.zeros(num_steps, num_processes, act_dim, device="cpu")
     buffer_values = torch.zeros(num_steps, num_processes, 1, device="cpu")
 
-    actor_critic = load_model(model_path=TEACHER_PATH, num_obs=48, device=args.rl_device)
+    actor_critic = load_model(model_path=TEACHER_PATH, num_obs=48, num_actions=act_dim-3, device=args.rl_device)
     for param in actor_critic.parameters():
         param.requires_grad = False
 
-    student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
+    student_actor_critic = load_model(model_path=None, num_obs=48-3, num_actions=act_dim, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
 
@@ -85,6 +85,10 @@ def train(args):
                 action = actor_critic.act_inference(
                     buffer_observations[step].to(args.rl_device)
                 )
+                # copying the input linear velocity as the output linear velocity prediction
+                observed_lin_velocity = buffer_observations[step,:,0:3].to(args.rl_device)
+                action = torch.cat((action, observed_lin_velocity), dim=1)
+
                 value = actor_critic.evaluate(buffer_observations[step].to(args.rl_device))
 
                 # QUESTION: if epoch == 0, should I use action from act_inference (deterministic) or stochastic action?
@@ -96,10 +100,12 @@ def train(args):
                     stochastic_action = actor_critic.act(
                         buffer_observations[step].to(args.rl_device)
                     )
+                    observed_lin_velocity = buffer_observations[step,:,0:3].to(args.rl_device)
+                    stochastic_action = torch.cat((stochastic_action, observed_lin_velocity), dim=1)
 
                 cpu_actions = stochastic_action # if epoch > 0 else action
-
-                obs, _, _, _, _ = env.step(cpu_actions)
+                
+                obs, _, _, _, _ = env.step(cpu_actions[:,:-3])
 
                 buffer_observations[step + 1].copy_(obs.to("cpu"))
                 buffer_actions[step].copy_(action.to("cpu"))
@@ -124,6 +130,7 @@ def train(args):
             actions_batch = actions_shaped[indices]
             values_batch = values_shaped[indices]
 
+            # pred_actions: 12 of actual motor commands, and 3 of linear velocity predictions
             pred_actions = student_actor_critic.act_inference(observations_batch[:,3:].to("cuda:0"))
             pred_values = student_actor_critic.evaluate(observations_batch[:,3:].to("cuda:0"))
 
