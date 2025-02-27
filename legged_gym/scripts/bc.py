@@ -20,11 +20,11 @@ import torch.nn.functional as F
 # python legged_gym/scripts/play.py --task=go2 --load_run=Dec04_15-02-59_normal_walk 
 # 904 finished runs, with total avg rewards of 27.316011428833008
 
-NUM_EPOCHS = 500
+NUM_EPOCHS = 300
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch"
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_same_obs"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 NUM_TEACHER_EPOCHS = 1
 
@@ -66,7 +66,7 @@ def train(args):
     for param in actor_critic.parameters():
         param.requires_grad = False
 
-    student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
+    student_actor_critic = load_model(model_path=None, num_obs=48, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
 
@@ -90,7 +90,7 @@ def train(args):
                 # QUESTION: if epoch == 0, should I use action from act_inference (deterministic) or stochastic action?
                 if epoch >= NUM_TEACHER_EPOCHS:
                     stochastic_action = student_actor_critic.act(
-                        buffer_observations[step,:,3:].to(args.rl_device)
+                        buffer_observations[step].to(args.rl_device)
                     )
                 else:
                     stochastic_action = actor_critic.act(
@@ -124,8 +124,8 @@ def train(args):
             actions_batch = actions_shaped[indices]
             values_batch = values_shaped[indices]
 
-            pred_actions = student_actor_critic.act_inference(observations_batch[:,3:].to("cuda:0"))
-            pred_values = student_actor_critic.evaluate(observations_batch[:,3:].to("cuda:0"))
+            pred_actions = student_actor_critic.act_inference(observations_batch.to("cuda:0"))
+            pred_values = student_actor_critic.evaluate(observations_batch.to("cuda:0"))
 
             action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
             value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
