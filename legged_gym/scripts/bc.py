@@ -3,6 +3,7 @@ from legged_gym.envs import * # required to prevent circular imports
 from legged_gym.utils import get_args, task_registry
 from rsl_rl.modules import ActorCritic
 
+import os
 import torch
 import csv
 import time
@@ -24,7 +25,7 @@ NUM_EPOCHS = 500
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch"
+SAVE_PATH = "logs/behavior_cloning/walking_dagger_with_hist_len_6"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 NUM_TEACHER_EPOCHS = 1
 
@@ -89,6 +90,8 @@ def train(args):
     est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
     buffer_student_observations[-1].copy_(est_obs.to("cpu"))
 
+    if not os.path.exists(SAVE_PATH):
+        os.makedirs(SAVE_PATH)
     file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
     writer = csv.writer(file)
     writer.writerow(["Epoch", "Elapsed Time", "Action Loss", "Value Loss"])
@@ -106,7 +109,7 @@ def train(args):
                 # QUESTION: if epoch == 0, should I use action from act_inference (deterministic) or stochastic action?
                 if epoch >= NUM_TEACHER_EPOCHS:
                     stochastic_action = student_actor_critic.act(
-                        buffer_observations[step,:,3:].to(args.rl_device)
+                        buffer_student_observations[step].to(args.rl_device)
                     )
                 else:
                     stochastic_action = actor_critic.act(
@@ -141,7 +144,7 @@ def train(args):
         shuffled_indices_batch = shuffled_indices.view(num_mini_batch, -1)
 
         observations_shaped = buffer_observations.view(-1, obs_dim)
-        student_observations_shaped = buffer_student_observations.view(-1, obs_dim)
+        student_observations_shaped = buffer_student_observations.view(-1, student_obs_dim)
         actions_shaped = buffer_actions.view(-1, act_dim)
         values_shaped = buffer_values.view(-1, 1)
 
@@ -154,7 +157,7 @@ def train(args):
             student_observations_batch = student_observations_shaped[indices]
             actions_batch = actions_shaped[indices]
             values_batch = values_shaped[indices]
-
+            
             pred_actions = student_actor_critic.act_inference(student_observations_batch.to("cuda:0"))
             pred_values = student_actor_critic.evaluate(student_observations_batch.to("cuda:0"))
 

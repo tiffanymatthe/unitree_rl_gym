@@ -62,7 +62,7 @@ def play(args):
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     # policy = ppo_runner.get_inference_policy(device=env.device)
 
-    policy_path = None
+    policy_path = "logs/behavior_cloning/walking_dagger_with_hist_len_6/model.pt"
     policy = ActorCritic(
         num_actor_obs=48 - 3 + HIST_LEN * 2 * 12,
         num_critic_obs=48 - 3 + HIST_LEN * 2 * 12,
@@ -111,7 +111,7 @@ def play(args):
         # assume we are using full go2 env (48 observations including linear velocity)
         obs_with_history = torch.concatenate((obs.detach()[:,3:], dof_position_history, dof_velocity_history), dim=1)
 
-        actions = policy(obs_with_history.detach())
+        actions = policy(obs_with_history.detach().to("cpu"))
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
 
@@ -177,42 +177,42 @@ def play(args):
 
             plt.legend()
 
-            fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
+            # fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
 
-            REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
-            REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
+            # REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
+            # REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
 
-            JOINT_LIMITS = {
-                "FR_0": [-0.837758,0.837758],
-                "FR_1": [-1.5708,3.4907],
-                "FR_2": [-2.7227, -0.83776],
-                "FL_0": [-0.837758,0.837758],
-                "FL_1": [-1.5708,3.4907],
-                "FL_2": [-2.7227, -0.83776],
-                "RR_0": [-0.837758,0.837758],
-                "RR_1": [-0.5236,4.5379],
-                "RR_2": [-2.7227, -0.83776],
-                "RL_0": [-0.837758,0.837758],
-                "RL_1": [-0.5236,4.5379],
-                "RL_2": [-2.7227, -0.83776],
-            }
+            # JOINT_LIMITS = {
+            #     "FR_0": [-0.837758,0.837758],
+            #     "FR_1": [-1.5708,3.4907],
+            #     "FR_2": [-2.7227, -0.83776],
+            #     "FL_0": [-0.837758,0.837758],
+            #     "FL_1": [-1.5708,3.4907],
+            #     "FL_2": [-2.7227, -0.83776],
+            #     "RR_0": [-0.837758,0.837758],
+            #     "RR_1": [-0.5236,4.5379],
+            #     "RR_2": [-2.7227, -0.83776],
+            #     "RL_0": [-0.837758,0.837758],
+            #     "RL_1": [-0.5236,4.5379],
+            #     "RL_2": [-2.7227, -0.83776],
+            # }
 
-            for i in range(12):
-                scaled_position = [x[i] / env.obs_scales.dof_pos + env.default_dof_pos[i] for x in dof_positions]
+            # for i in range(12):
+            #     scaled_position = [x[i] / env.obs_scales.dof_pos + env.default_dof_pos[i] for x in dof_positions]
 
-                scaled_action = [x[i] * env.cfg.control.action_scale + env.default_dof_pos[i] for x in policy_output_actions]
+            #     scaled_action = [x[i] * env.cfg.control.action_scale + env.default_dof_pos[i] for x in policy_output_actions]
 
-                axs1[i].plot(scaled_position, label="position (rad)") # use action_scale
-                axs1[i].plot(scaled_action, label="action (rad)")
+            #     axs1[i].plot(scaled_position, label="position (rad)") # use action_scale
+            #     axs1[i].plot(scaled_action, label="action (rad)")
 
-                label = REAL_JOINT_LABELS[REAL_TO_SIM[i]]
+            #     label = REAL_JOINT_LABELS[REAL_TO_SIM[i]]
 
-                axs1[i].axhline(JOINT_LIMITS[label][0], linestyle="--", color="black")
-                axs1[i].axhline(JOINT_LIMITS[label][1], linestyle="--", color="black")
+            #     axs1[i].axhline(JOINT_LIMITS[label][0], linestyle="--", color="black")
+            #     axs1[i].axhline(JOINT_LIMITS[label][1], linestyle="--", color="black")
                 
-                axs1[i].set_title(label)
-                if i == 11:
-                    axs1[i].legend()
+            #     axs1[i].set_title(label)
+            #     if i == 11:
+            #         axs1[i].legend()
 
             plt.show()
             input("Continue by entering.")
