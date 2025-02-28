@@ -53,25 +53,41 @@ def train(args):
     obs_dim = 48
     act_dim = 12
     
+    history_len = 6
+    dof_len = 12
+
+    student_obs_dim = 48 - 3 + history_len * 2 * dof_len
+    student_obs_shape = (student_obs_dim,)
+    
     num_processes = 4096
     num_steps = BATCH_SIZE // num_processes + 1
 
     buffer_observations = torch.zeros(
         num_steps + 1, num_processes, *obs_shape, device="cpu"
     )
+    buffer_student_observations = torch.zeros(
+        num_steps + 1, num_processes, *student_obs_shape, device="cpu"
+    )
     buffer_actions = torch.zeros(num_steps, num_processes, act_dim, device="cpu")
     buffer_values = torch.zeros(num_steps, num_processes, 1, device="cpu")
+
+    past_joint_positions = torch.zeros(num_processes, dof_len * history_len, device="cpu")
+    past_joint_velocities = torch.zeros(num_processes, dof_len * history_len, device="cpu")
 
     actor_critic = load_model(model_path=TEACHER_PATH, num_obs=48, device=args.rl_device)
     for param in actor_critic.parameters():
         param.requires_grad = False
 
-    student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
+    student_actor_critic = load_model(model_path=None, num_obs=student_obs_dim, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
 
     obs = env.reset()[0]
     buffer_observations[-1].copy_(obs.to("cpu"))
+    past_joint_positions = obs[:,12:24].repeat(1,history_len).detach().clone()
+    past_joint_velocities = obs[:,24:36].repeat(1,history_len).detach().clone()
+    est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
+    buffer_student_observations[-1].copy_(est_obs.to("cpu"))
 
     file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
     writer = csv.writer(file)
@@ -99,11 +115,24 @@ def train(args):
 
                 cpu_actions = stochastic_action # if epoch > 0 else action
 
-                obs, _, _, _, _ = env.step(cpu_actions)
+                obs, _, _, dones, _ = env.step(cpu_actions)
+                est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
 
                 buffer_observations[step + 1].copy_(obs.to("cpu"))
                 buffer_actions[step].copy_(action.to("cpu"))
                 buffer_values[step].copy_(value.to("cpu"))
+                buffer_student_observations[step + 1].copy_(est_obs.to("cpu"))
+
+                # if not done, update history
+                # first shift last two to first two to leave a space for the last one
+                past_joint_positions[~dones,:-12].copy_(past_joint_positions[~dones,12:])
+                past_joint_positions[~dones,-12:].copy_(obs[~dones,12:24])
+                past_joint_velocities[~dones,:-12].copy_(past_joint_velocities[~dones,12:])
+                past_joint_velocities[~dones,-12:].copy_(obs[~dones,24:36])
+
+                # if done, repeat history
+                past_joint_positions[dones].copy_(obs[dones,12:24].repeat(1,history_len))
+                past_joint_velocities[dones].copy_(obs[dones,24:36].repeat(1,history_len))
 
         num_mini_batch = BATCH_SIZE // MINI_BATCH_SIZE
         shuffled_indices = torch.randperm(
@@ -112,6 +141,7 @@ def train(args):
         shuffled_indices_batch = shuffled_indices.view(num_mini_batch, -1)
 
         observations_shaped = buffer_observations.view(-1, obs_dim)
+        student_observations_shaped = buffer_student_observations.view(-1, obs_dim)
         actions_shaped = buffer_actions.view(-1, act_dim)
         values_shaped = buffer_values.view(-1, 1)
 
@@ -121,11 +151,12 @@ def train(args):
         for indices in shuffled_indices_batch:
             optimizer.zero_grad()
             observations_batch = observations_shaped[indices]
+            student_observations_batch = student_observations_shaped[indices]
             actions_batch = actions_shaped[indices]
             values_batch = values_shaped[indices]
 
-            pred_actions = student_actor_critic.act_inference(observations_batch[:,3:].to("cuda:0"))
-            pred_values = student_actor_critic.evaluate(observations_batch[:,3:].to("cuda:0"))
+            pred_actions = student_actor_critic.act_inference(student_observations_batch.to("cuda:0"))
+            pred_values = student_actor_critic.evaluate(student_observations_batch.to("cuda:0"))
 
             action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
             value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
