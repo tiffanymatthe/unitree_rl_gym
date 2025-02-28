@@ -66,8 +66,8 @@ def play(args):
 
     estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_hist_len_6/model.pt"
     estimator = ActorCritic(
-        num_actor_obs=48 - 3 + HIST_LEN * 2 * 12,
-        num_critic_obs=48 - 3 + HIST_LEN * 2 * 12,
+        num_actor_obs=48 - 6 + HIST_LEN * 2 * 12,
+        num_critic_obs=48 - 6 + HIST_LEN * 2 * 12,
         num_actions=3, # linear velocity x y z
         actor_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 128],
@@ -111,7 +111,7 @@ def play(args):
             dof_position_history = obs[:,12:24].repeat(1,HIST_LEN)
             dof_velocity_history = obs[:,24:36].repeat(1,HIST_LEN)
 
-        est_obs = torch.concatenate((obs.detach()[:,3:], dof_position_history, dof_velocity_history), dim=1)
+        est_obs = torch.concatenate((obs.detach()[:,3:9], obs.detach()[:,12:], dof_position_history, dof_velocity_history), dim=1)
         lin_velocities = estimator(est_obs.to("cpu").detach()).detach()
         full_obs = torch.concatenate((lin_velocities, obs.to("cpu").detach()[:,3:]), dim=1)
         actions = policy(full_obs.to("cuda:0"))

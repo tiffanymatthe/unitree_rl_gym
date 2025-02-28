@@ -61,8 +61,8 @@ def train(args):
     action_dim = 3
     history_len = 6
     dof_len = 12
-    estimator_obs_shape = (obs_dim - 3 + history_len * 2 * dof_len,)
-    estimator_obs_dim = obs_dim - 3 + history_len * 2 * dof_len
+    estimator_obs_shape = (obs_dim - 6 + history_len * 2 * dof_len,)
+    estimator_obs_dim = obs_dim - 6 + history_len * 2 * dof_len
     
     num_processes = 4096
     num_steps = BATCH_SIZE // num_processes + 1
@@ -81,7 +81,7 @@ def train(args):
     for param in actor_critic.parameters():
         param.requires_grad = False
 
-    # remove linear velocity (3) but add a history of size 3 of past joint positions and velocities (6 + 6)
+    # remove linear velocity and commands (6) but add a history of size 3 of past joint positions and velocities (6 + 6)
     estimator = load_estimator_model(model_path=None, num_obs=estimator_obs_dim, device=args.rl_device)
 
     past_joint_positions = torch.zeros(num_processes, dof_len * history_len, device="cpu")
@@ -93,7 +93,7 @@ def train(args):
     buffer_observations[-1].copy_(obs.to("cpu"))
     past_joint_positions = obs[:,12:24].repeat(1,history_len).detach().clone()
     past_joint_velocities = obs[:,24:36].repeat(1,history_len).detach().clone()
-    est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
+    est_obs = torch.concatenate((obs[:,3:9], obs[:,9:], past_joint_positions, past_joint_velocities), dim=1)
     buffer_estimator_observations[-1].copy_(est_obs.to("cpu"))
 
     file = open(f"{SAVE_PATH}/estimator_results.csv", mode="w", newline='')
@@ -112,7 +112,8 @@ def train(args):
 
                 obs, priv_obs, _, dones, _ = env.step(stochastic_action)
 
-                est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
+                # remove command (9 to 12)
+                est_obs = torch.concatenate((obs[:,3:9], obs[:,12:], past_joint_positions, past_joint_velocities), dim=1)
                 buffer_estimator_observations[step + 1].copy_(est_obs.to("cpu"))
                 buffer_observations[step + 1].copy_(obs.to("cpu"))
                 buffer_actions[step].copy_(priv_obs[:,0:3].to("cpu"))
