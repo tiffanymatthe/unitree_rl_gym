@@ -63,7 +63,7 @@ def play(args):
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
 
-    estimator_path = None
+    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_2/model.pt"
     estimator = ActorCritic(
         num_actor_obs=48 - 3 + 3 * 2 * 12,
         num_critic_obs=48 - 3 + 3 * 2 * 12,
@@ -74,9 +74,9 @@ def play(args):
         init_noise_std=1.0
     )
 
-    estimator.load_state_dict(torch.load(estimator_path, map_location=torch.device("cuda:0"))['model_state_dict'])
-    for param in estimator.parameters():
-        param.requires_grad = False
+    estimator.load_state_dict(torch.load(estimator_path, map_location=torch.device("cpu"))['model_state_dict'])
+    estimator.eval()
+    estimator = estimator.act_inference
     
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
@@ -107,19 +107,20 @@ def play(args):
             all_obs.append(obs.cpu().numpy())
             all_velocities.append(obs[:,0:3].cpu().numpy())
 
-            dof_position_history = obs[:,12:24].repeat(3)
-            dof_velocity_history = obs[:,24:36].repeat(3)
+            dof_position_history = obs[:,12:24].repeat(1,3)
+            dof_velocity_history = obs[:,24:36].repeat(1,3)
 
-        lin_velocities = estimator(torch.concatenate(obs.detach()[:,3:], dof_position_history, dof_velocity_history, dim=1)).detach()
-        full_obs = torch.concatenate(lin_velocities, obs.detach()[:,3:])
-        actions = policy(full_obs)
+        est_obs = torch.concatenate((obs.detach()[:,3:], dof_position_history, dof_velocity_history), dim=1)
+        lin_velocities = estimator(est_obs.to("cpu").detach()).detach()
+        full_obs = torch.concatenate((lin_velocities, obs.to("cpu").detach()[:,3:]), dim=1)
+        actions = policy(full_obs.to("cuda:0"))
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
         all_velocities.append(lin_velocities.cpu().numpy())
 
-        dof_position_history = torch.concatenate(dof_position_history, obs.detach()[:,12:24], axis=1)
+        dof_position_history = torch.concatenate((dof_position_history, obs.detach()[:,12:24]), dim=1)
         dof_position_history = dof_position_history[:,12:] # remove the first 12, too past
-        dof_velocity_history = torch.concatenate(dof_velocity_history, obs.detach()[:,24:36], axis=1)
+        dof_velocity_history = torch.concatenate((dof_velocity_history, obs.detach()[:,24:36]), dim=1)
         dof_velocity_history = dof_velocity_history[:,12:]
 
         # if (i % int(env.max_episode_length) == 1):
@@ -182,14 +183,15 @@ def play(args):
                 axs2[i].plot(est_lin_vel, label="est")
 
                 if i < 2:
-                    target_lin_vel = [x[i] for x in lin_x_y_yaw_commands]
+                    target_lin_vel = [x[i] / env.obs_scales.lin_vel for x in lin_x_y_yaw_commands]
                     axs2[i].plot(target_lin_vel, label="target cmd")
 
                 axs2[i].set_title(labels[i])
 
-            axs2.legend() 
+            plt.legend()
 
             fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
+            axs1 = axs1.flatten()
 
             REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
             REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
@@ -210,9 +212,9 @@ def play(args):
             }
 
             for i in range(12):
-                scaled_position = [x[i] / env.obs_scales.dof_pos + env.default_dof_pos[i] for x in dof_positions]
+                scaled_position = np.array([x[i] / env.obs_scales.dof_pos + env.default_dof_pos[0][i].to("cpu") for x in dof_positions])
 
-                scaled_action = [x[i] * env.cfg.control.action_scale + env.default_dof_pos[i] for x in policy_output_actions]
+                scaled_action = np.array([x[i] * env.cfg.control.action_scale + env.default_dof_pos[0][i].to("cpu") for x in policy_output_actions])
 
                 axs1[i].plot(scaled_position, label="position (rad)") # use action_scale
                 axs1[i].plot(scaled_action, label="action (rad)")

@@ -12,7 +12,7 @@ NUM_EPOCHS = 300
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_estimator"
+SAVE_PATH = "logs/behavior_cloning/walking_estimator_2"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
@@ -59,8 +59,10 @@ def train(args):
     action_shape = (3,) # for estimator
     obs_dim = 48
     action_dim = 3
-    estimator_obs_shape = (obs_dim - 3 + 3 * 2 * 12,)
-    estimator_obs_dim = obs_dim - 3 + 3 * 2 * 12
+    history_len = 3
+    dof_len = 12
+    estimator_obs_shape = (obs_dim - 3 + history_len * 2 * dof_len,)
+    estimator_obs_dim = obs_dim - 3 + history_len * 2 * dof_len
     
     num_processes = 4096
     num_steps = BATCH_SIZE // num_processes + 1
@@ -79,18 +81,18 @@ def train(args):
     for param in actor_critic.parameters():
         param.requires_grad = False
 
-    # remove linear velocity (3) but add a history of size 3 of past joint positions and velocities (6)
+    # remove linear velocity (3) but add a history of size 3 of past joint positions and velocities (6 + 6)
     estimator = load_estimator_model(model_path=None, num_obs=estimator_obs_dim, device=args.rl_device)
 
-    past_joint_positions = torch.zeros(num_processes, 12 * 3, device="cpu")
-    past_joint_velocities = torch.zeros(num_processes, 12 * 3, device="cpu")
+    past_joint_positions = torch.zeros(num_processes, dof_len * history_len, device="cpu")
+    past_joint_velocities = torch.zeros(num_processes, dof_len * history_len, device="cpu")
 
     optimizer = torch.optim.Adam(estimator.parameters(), lr=3e-4)
 
     obs = env.reset()[0]
     buffer_observations[-1].copy_(obs.to("cpu"))
-    past_joint_positions = obs[:,12:24].repeat(1,3).detach().clone()
-    past_joint_velocities = obs[:,24:36].repeat(1,3).detach().clone()
+    past_joint_positions = obs[:,12:24].repeat(1,history_len).detach().clone()
+    past_joint_velocities = obs[:,24:36].repeat(1,history_len).detach().clone()
     est_obs = torch.concatenate((obs[:,3:], past_joint_positions, past_joint_velocities), dim=1)
     buffer_estimator_observations[-1].copy_(est_obs.to("cpu"))
 
@@ -118,13 +120,13 @@ def train(args):
                 # if not done, update history
                 # first shift last two to first two to leave a space for the last one
                 past_joint_positions[~dones,:-12].copy_(past_joint_positions[~dones,12:])
-                past_joint_positions[~dones,:12].copy_(obs[~dones,12:24])
+                past_joint_positions[~dones,-12:].copy_(obs[~dones,12:24])
                 past_joint_velocities[~dones,:-12].copy_(past_joint_velocities[~dones,12:])
-                past_joint_velocities[~dones,:12].copy_(obs[~dones,24:36])
+                past_joint_velocities[~dones,-12:].copy_(obs[~dones,24:36])
 
                 # if done, repeat history
-                past_joint_positions[dones].copy_(obs[dones,12:24].repeat(1,3))
-                past_joint_velocities[dones].copy_(obs[dones,24:36].repeat(1,3))
+                past_joint_positions[dones].copy_(obs[dones,12:24].repeat(1,history_len))
+                past_joint_velocities[dones].copy_(obs[dones,24:36].repeat(1,history_len))
 
                 # print(f"Past joint positions and velocities: {past_joint_positions[0]} and {past_joint_velocities[0]} for step {step} in epoch {epoch}")
 
