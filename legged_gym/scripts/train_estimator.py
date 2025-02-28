@@ -3,6 +3,7 @@ from legged_gym.envs import * # required to prevent circular imports
 from legged_gym.utils import get_args, task_registry
 from rsl_rl.modules import ActorCritic
 
+import os
 import torch
 import csv
 import time
@@ -12,7 +13,7 @@ NUM_EPOCHS = 300
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_estimator_hist_len_6"
+SAVE_PATH = "logs/behavior_cloning/walking_estimator_hist_len_6_no_cmd"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
@@ -93,8 +94,11 @@ def train(args):
     buffer_observations[-1].copy_(obs.to("cpu"))
     past_joint_positions = obs[:,12:24].repeat(1,history_len).detach().clone()
     past_joint_velocities = obs[:,24:36].repeat(1,history_len).detach().clone()
-    est_obs = torch.concatenate((obs[:,3:9], obs[:,9:], past_joint_positions, past_joint_velocities), dim=1)
+    est_obs = torch.concatenate((obs[:,3:9], obs[:,12:], past_joint_positions, past_joint_velocities), dim=1)
     buffer_estimator_observations[-1].copy_(est_obs.to("cpu"))
+    
+    if not os.path.exists(SAVE_PATH):
+        os.makedirs(SAVE_PATH)
 
     file = open(f"{SAVE_PATH}/estimator_results.csv", mode="w", newline='')
     writer = csv.writer(file)

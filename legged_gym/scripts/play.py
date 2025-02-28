@@ -64,7 +64,7 @@ def play(args):
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
 
-    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_hist_len_6/model.pt"
+    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_hist_len_6_no_cmd/model.pt"
     estimator = ActorCritic(
         num_actor_obs=48 - 6 + HIST_LEN * 2 * 12,
         num_critic_obs=48 - 6 + HIST_LEN * 2 * 12,
@@ -181,7 +181,7 @@ def play(args):
                 true_lin_vel = [x[i] / 2 for x in true_linear_velocities]
                 est_lin_vel = [x[i] / 2 for x in estimated_linear_velocities]
                 axs2[i].plot(true_lin_vel, label="true")
-                axs2[i].plot(est_lin_vel, label="est")
+                # axs2[i].plot(est_lin_vel, label="est")
 
                 if i < 2:
                     target_lin_vel = [x[i] / env.obs_scales.lin_vel for x in lin_x_y_yaw_commands]
@@ -189,7 +189,7 @@ def play(args):
 
                 axs2[i].set_title(labels[i])
 
-            plt.legend()
+                axs2[i].legend()
 
             fig1, axs1 = plt.subplots(4, 3, figsize=(12,8))
             axs1 = axs1.flatten()
