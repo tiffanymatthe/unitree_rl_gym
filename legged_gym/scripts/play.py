@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from rsl_rl.modules import ActorCritic
 
 NUM_ENVS = 1
+HIST_LEN = 6
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -63,10 +64,10 @@ def play(args):
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
 
-    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_2/model.pt"
+    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_hist_len_6/model.pt"
     estimator = ActorCritic(
-        num_actor_obs=48 - 3 + 3 * 2 * 12,
-        num_critic_obs=48 - 3 + 3 * 2 * 12,
+        num_actor_obs=48 - 3 + HIST_LEN * 2 * 12,
+        num_critic_obs=48 - 3 + HIST_LEN * 2 * 12,
         num_actions=3, # linear velocity x y z
         actor_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 128],
@@ -107,8 +108,8 @@ def play(args):
             all_obs.append(obs.cpu().numpy())
             all_velocities.append(obs[:,0:3].cpu().numpy())
 
-            dof_position_history = obs[:,12:24].repeat(1,3)
-            dof_velocity_history = obs[:,24:36].repeat(1,3)
+            dof_position_history = obs[:,12:24].repeat(1,HIST_LEN)
+            dof_velocity_history = obs[:,24:36].repeat(1,HIST_LEN)
 
         est_obs = torch.concatenate((obs.detach()[:,3:], dof_position_history, dof_velocity_history), dim=1)
         lin_velocities = estimator(est_obs.to("cpu").detach()).detach()

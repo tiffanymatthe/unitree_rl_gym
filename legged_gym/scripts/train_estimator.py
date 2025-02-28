@@ -12,7 +12,7 @@ NUM_EPOCHS = 300
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_estimator_2"
+SAVE_PATH = "logs/behavior_cloning/walking_estimator_hist_len_6"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
@@ -59,7 +59,7 @@ def train(args):
     action_shape = (3,) # for estimator
     obs_dim = 48
     action_dim = 3
-    history_len = 3
+    history_len = 6
     dof_len = 12
     estimator_obs_shape = (obs_dim - 3 + history_len * 2 * dof_len,)
     estimator_obs_dim = obs_dim - 3 + history_len * 2 * dof_len
