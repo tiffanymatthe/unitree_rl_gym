@@ -12,7 +12,7 @@ NUM_EPOCHS = 300
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_estimator_2"
+SAVE_PATH = "logs/behavior_cloning/walking_estimator_no_history"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
@@ -59,7 +59,7 @@ def train(args):
     action_shape = (3,) # for estimator
     obs_dim = 48
     action_dim = 3
-    history_len = 3
+    history_len = 0
     dof_len = 12
     estimator_obs_shape = (obs_dim - 3 + history_len * 2 * dof_len,)
     estimator_obs_dim = obs_dim - 3 + history_len * 2 * dof_len
@@ -117,16 +117,16 @@ def train(args):
                 buffer_observations[step + 1].copy_(obs.to("cpu"))
                 buffer_actions[step].copy_(priv_obs[:,0:3].to("cpu"))
 
-                # if not done, update history
-                # first shift last two to first two to leave a space for the last one
-                past_joint_positions[~dones,:-12].copy_(past_joint_positions[~dones,12:])
-                past_joint_positions[~dones,-12:].copy_(obs[~dones,12:24])
-                past_joint_velocities[~dones,:-12].copy_(past_joint_velocities[~dones,12:])
-                past_joint_velocities[~dones,-12:].copy_(obs[~dones,24:36])
+                # # if not done, update history
+                # # first shift last two to first two to leave a space for the last one
+                # past_joint_positions[~dones,:-12].copy_(past_joint_positions[~dones,12:])
+                # past_joint_positions[~dones,-12:].copy_(obs[~dones,12:24])
+                # past_joint_velocities[~dones,:-12].copy_(past_joint_velocities[~dones,12:])
+                # past_joint_velocities[~dones,-12:].copy_(obs[~dones,24:36])
 
-                # if done, repeat history
-                past_joint_positions[dones].copy_(obs[dones,12:24].repeat(1,history_len))
-                past_joint_velocities[dones].copy_(obs[dones,24:36].repeat(1,history_len))
+                # # if done, repeat history
+                # past_joint_positions[dones].copy_(obs[dones,12:24].repeat(1,history_len))
+                # past_joint_velocities[dones].copy_(obs[dones,24:36].repeat(1,history_len))
 
                 # print(f"Past joint positions and velocities: {past_joint_positions[0]} and {past_joint_velocities[0]} for step {step} in epoch {epoch}")
 

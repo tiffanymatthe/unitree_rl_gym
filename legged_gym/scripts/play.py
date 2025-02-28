@@ -55,6 +55,8 @@ def play(args):
     dof_position_history = []
     dof_velocity_history = []
 
+    history_len = 0
+
     # obs = env.get_observations()
     # all_obs.append(obs.cpu().numpy())
     # all_velocities.append(obs[:,0:3].cpu().numpy())
@@ -63,10 +65,10 @@ def play(args):
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
 
-    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_2/model.pt"
+    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_no_history/model.pt"
     estimator = ActorCritic(
-        num_actor_obs=48 - 3 + 3 * 2 * 12,
-        num_critic_obs=48 - 3 + 3 * 2 * 12,
+        num_actor_obs=48 - 3 + history_len * 2 * 12,
+        num_critic_obs=48 - 3 + history_len * 2 * 12,
         num_actions=3, # linear velocity x y z
         actor_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 128],
@@ -107,8 +109,8 @@ def play(args):
             all_obs.append(obs.cpu().numpy())
             all_velocities.append(obs[:,0:3].cpu().numpy())
 
-            dof_position_history = obs[:,12:24].repeat(1,3)
-            dof_velocity_history = obs[:,24:36].repeat(1,3)
+            dof_position_history = obs[:,12:24].repeat(1,history_len)
+            dof_velocity_history = obs[:,24:36].repeat(1,history_len)
 
         est_obs = torch.concatenate((obs.detach()[:,3:], dof_position_history, dof_velocity_history), dim=1)
         lin_velocities = estimator(est_obs.to("cpu").detach()).detach()
@@ -118,10 +120,10 @@ def play(args):
         all_obs.append(obs.cpu().numpy())
         all_velocities.append(lin_velocities.cpu().numpy())
 
-        dof_position_history = torch.concatenate((dof_position_history, obs.detach()[:,12:24]), dim=1)
-        dof_position_history = dof_position_history[:,12:] # remove the first 12, too past
-        dof_velocity_history = torch.concatenate((dof_velocity_history, obs.detach()[:,24:36]), dim=1)
-        dof_velocity_history = dof_velocity_history[:,12:]
+        # dof_position_history = torch.concatenate((dof_position_history, obs.detach()[:,12:24]), dim=1)
+        # dof_position_history = dof_position_history[:,12:] # remove the first 12, too past
+        # dof_velocity_history = torch.concatenate((dof_velocity_history, obs.detach()[:,24:36]), dim=1)
+        # dof_velocity_history = dof_velocity_history[:,12:]
 
         # if (i % int(env.max_episode_length) == 1):
         #     input("press to play")
