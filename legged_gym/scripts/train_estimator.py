@@ -7,14 +7,15 @@ import torch
 import csv
 import time
 import torch.nn.functional as F
+import os
 
 NUM_EPOCHS = 300
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 HISTORY_LEN = 6
-NUM_TEACHER_EPOCHS = 1
+NUM_TEACHER_EPOCHS = 50
 
-SAVE_PATH = "logs/behavior_cloning/walking_chained_hist_len_6"
+SAVE_PATH = "logs/behavior_cloning/walking_chained_hist_len_6_base_teacher_50_w_0_1_w_5"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
@@ -64,8 +65,8 @@ def train(args):
     teacher_action_shape = (12,)
     teacher_action_dim = 12
 
-    student_obs_shape = (45,) # for env
-    student_obs_dim = 45
+    student_obs_shape = (48,) # for env
+    student_obs_dim = 48
     student_action_shape = (12,) # for estimator
     student_action_dim = 12
 
@@ -108,8 +109,10 @@ def train(args):
     buffer_observations[-1].copy_(obs.to("cpu"))
     past_joint_positions = obs[:,12:24].repeat(1,HISTORY_LEN).detach().clone()
     past_joint_velocities = obs[:,24:36].repeat(1,HISTORY_LEN).detach().clone()
-    est_obs = torch.concatenate((obs[:,3:9], obs[:,9:], past_joint_positions, past_joint_velocities), dim=1)
+    est_obs = torch.concatenate((obs[:,3:9], obs[:,12:], past_joint_positions, past_joint_velocities), dim=1)
     buffer_estimator_observations[-1].copy_(est_obs.to("cpu"))
+
+    os.makedirs(SAVE_PATH, exist_ok=True)
 
     file = open(f"{SAVE_PATH}/combined_results.csv", mode="w", newline='')
     writer = csv.writer(file)
@@ -181,10 +184,11 @@ def train(args):
             estimator_observations_batch = estimator_observations_shaped[indices]
             pred_estimator_actions = estimator.act_inference(estimator_observations_batch.to("cuda:0"))
             modified_observations_batch = observations_batch.clone()
-            modified_observations_batch[:,0:3] = pred_estimator_actions #.detach()
+            if NUM_EPOCHS > NUM_TEACHER_EPOCHS:
+                modified_observations_batch[:,0:3] = pred_estimator_actions #.detach()
             pred_student_actions = student_actor_critic.act_inference(modified_observations_batch.to("cuda:0"))
-            estimator_action_loss = F.mse_loss(pred_estimator_actions, estimator_actions_batch.to("cuda:0"))
-            student_action_loss = F.mse_loss(pred_student_actions, student_actions_batch.to("cuda:0"))
+            estimator_action_loss = F.mse_loss(pred_estimator_actions, estimator_actions_batch.to("cuda:0")) * 0.1
+            student_action_loss = F.mse_loss(pred_student_actions, student_actions_batch.to("cuda:0")) * 5
             (estimator_action_loss + student_action_loss).backward()
 
             optimizer.step()
@@ -194,6 +198,7 @@ def train(args):
 
         L = shuffled_indices_batch.shape[0]
         ep_action_loss.div_(L)
+        ep_estimator_action_loss.div_(L)
 
         elapsed_time = time.time() - start
 
@@ -209,7 +214,7 @@ def train(args):
             'optimizer_state_dict': optimizer.state_dict(),
             'iter': epoch,
             "infos": None,
-            }, f"{SAVE_PATH}/policy_model.pt")
+            }, f"{SAVE_PATH}/model.pt")
 
         print(
             (

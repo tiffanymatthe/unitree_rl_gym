@@ -1,8 +1,8 @@
 paths = [
     # "logs/behavior_cloning/distill",
     # order: function for stochastic action for teacher epochs, batch size
-    "logs/behavior_cloning/walking_estimator_2",
-    "logs/behavior_cloning/walking_estimator_hist_len_6"
+    "logs/behavior_cloning/walking_chained_hist_len_6",
+    "logs/behavior_cloning/walking_chained_hist_len_6_detach"
     # "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch", # act(), 100k
     # "logs/behavior_cloning/walking_dagger_1_teacher_inference_50k_batch", # act_inference(), 50k
     # "logs/behavior_cloning/walking_dagger_1_teacher_inference", # act_inference(), 20k
@@ -28,10 +28,11 @@ def read_csv(file_path):
     
     return data
 
-dfs = [read_csv(f"{path}/estimator_results.csv") for path in paths]
+dfs = [read_csv(f"{path}/combined_results.csv") for path in paths]
 
 for path, df in zip(paths, dfs):
-    plt.plot(df["Epoch"], df["Action Loss"], label=path)
+    plt.plot(df["Epoch"], df["Action Loss"], label=f"{path} 12 dof")
+    plt.plot(df["Epoch"], df["Estimator Action Loss"], label=f"{path} lin vel")
 
 plt.xlabel("Epoch")
 plt.ylabel("Action Loss")

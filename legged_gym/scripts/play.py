@@ -60,11 +60,27 @@ def play(args):
     # all_obs.append(obs.cpu().numpy())
     # all_velocities.append(obs[:,0:3].cpu().numpy())
     # load policy
-    train_cfg.runner.resume = True
-    ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
-    policy = ppo_runner.get_inference_policy(device=env.device)
+    # train_cfg.runner.resume = True
+    # ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
+    # policy = ppo_runner.get_inference_policy(device=env.device)
 
-    estimator_path = "/home/fizzer/rl_gym/unitree_rl_gym/logs/behavior_cloning/walking_estimator_hist_len_6/model.pt"
+    policy_path = "logs/behavior_cloning/walking_chained_hist_len_6_base_teacher_50_w_0_1_w_5/model.pt"
+
+    policy = ActorCritic(
+        num_actor_obs=48,
+        num_critic_obs=48,
+        num_actions=12, # linear velocity x y z
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+        activation='elu',
+        init_noise_std=1.0
+    )
+
+    policy.load_state_dict(torch.load(policy_path, map_location=torch.device("cpu"))['model_state_dict'])
+    policy.eval()
+    policy = policy.act_inference
+
+    estimator_path = "logs/behavior_cloning/walking_chained_hist_len_6_base_teacher_50_w_0_1_w_5/estimator_model.pt"
     estimator = ActorCritic(
         num_actor_obs=48 - 6 + HIST_LEN * 2 * 12,
         num_critic_obs=48 - 6 + HIST_LEN * 2 * 12,
@@ -79,11 +95,11 @@ def play(args):
     estimator.eval()
     estimator = estimator.act_inference
     
-    # export policy as a jit module (used to run it from C++)
-    if EXPORT_POLICY:
-        path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
-        export_policy_as_jit(ppo_runner.alg.actor_critic, path)
-        print('Exported policy as jit script to: ', path)
+    # # export policy as a jit module (used to run it from C++)
+    # if EXPORT_POLICY:
+    #     path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
+    #     export_policy_as_jit(ppo_runner.alg.actor_critic, path)
+    #     print('Exported policy as jit script to: ', path)
 
     all_rews = torch.zeros((NUM_ENVS,), device=args.rl_device)
     avg_rewards = 0
@@ -114,7 +130,7 @@ def play(args):
         est_obs = torch.concatenate((obs.detach()[:,3:9], obs.detach()[:,12:], dof_position_history, dof_velocity_history), dim=1)
         lin_velocities = estimator(est_obs.to("cpu").detach()).detach()
         full_obs = torch.concatenate((lin_velocities, obs.to("cpu").detach()[:,3:]), dim=1)
-        actions = policy(full_obs.to("cuda:0"))
+        actions = policy(full_obs.to("cpu"))
         obs, _, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
         all_velocities.append(lin_velocities.cpu().numpy())
