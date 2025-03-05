@@ -20,6 +20,8 @@ def read_csv(file_path):
 
 dfs = [read_csv(f"{path}/bc_results.csv") for path in paths]
 
+cmd_dfs = [read_csv(f"{path}/cmd_vel_data.csv") for path in paths]
+
 fig, axs = plt.subplots(4,4, figsize=(20,20))
 axs = axs.flatten()
 
@@ -44,8 +46,13 @@ y_min, y_max = min(all_y_values_flat), max(all_y_values_flat)
 for ax in axs:
     ax.set_ylim(y_min, y_max)
 
-plt.xlabel("Epoch")
-plt.ylabel("Action Loss")
-plt.title("Action Loss Comparison")
-plt.legend()
+fig1, axs1 = plt.subplots(4,1, figsize=(12,8))
+axs1 = axs1.flatten()
+
+headers = ["cmd_vel_x","cmd_vel_y","cmd_vel_yaw","cmd_heading"]
+for i, header in enumerate(headers):
+    for path, df in zip(paths, cmd_dfs):
+        axs1[i].hist(df[header], label=path)
+        axs1[i].set_title(header)
+
 plt.show()
