@@ -26,6 +26,12 @@ SAVE_PATH = f"logs/simple_bc/teacher_{NUM_TEACHER_EPOCHS}_epochs_x_{lin_vel_x[0]
 
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
+# Initialize lists to store the values
+cmd_vel_x_list = []
+cmd_vel_y_list = []
+cmd_vel_yaw_list = []
+cmd_heading_list = []
+
 def load_model(model_path, num_obs, device="cuda:0"):
     model = ActorCritic(
             num_actor_obs=num_obs,
@@ -85,6 +91,11 @@ def train(args):
     writer = csv.writer(file)
     writer.writerow(["Epoch", "Elapsed Time", "Action Loss", *[f"Dof {i} Action Loss" for i in range(12)], "Value Loss"])
 
+    # Open the CSV file in write mode initially to write the header
+    cmd_vel_file = open(f"{SAVE_PATH}/cmd_vel_data.csv", mode="w", newline='')
+    cmd_vel_writer = csv.writer(cmd_vel_file)
+    cmd_vel_writer.writerow(["cmd_vel_x", "cmd_vel_y", "cmd_vel_yaw", "cmd_heading"])
+
     start = time.time()
     for epoch in range(NUM_EPOCHS):
         with torch.no_grad():
@@ -107,6 +118,17 @@ def train(args):
                 cpu_actions = stochastic_action # if epoch > 0 else action
 
                 obs, _, _, _, _ = env.step(cpu_actions)
+
+                cmd_vel_x = obs[:,9]
+                cmd_vel_y = obs[:,10]
+                cmd_vel_yaw = obs[:,11]
+                cmd_heading = obs[:,12]
+
+                # Append the values to the lists
+                cmd_vel_x_list.extend(cmd_vel_x.cpu().numpy())
+                cmd_vel_y_list.extend(cmd_vel_y.cpu().numpy())
+                cmd_vel_yaw_list.extend(cmd_vel_yaw.cpu().numpy())
+                cmd_heading_list.extend(cmd_heading.cpu().numpy())
 
                 buffer_observations[step + 1].copy_(obs.to("cpu"))
                 buffer_actions[step].copy_(action.to("cpu"))
@@ -190,6 +212,16 @@ def train(args):
                 f"{ep_value_loss.item():8.2f}"
             ]
         )
+
+        for i in range(len(cmd_vel_x_list)):
+            rows = zip(cmd_vel_x_list, cmd_vel_y_list, cmd_vel_yaw_list, cmd_heading_list)
+            cmd_vel_writer.writerows(rows)
+
+        # Clear the lists after writing to the file
+        cmd_vel_x_list.clear()
+        cmd_vel_y_list.clear()
+        cmd_vel_yaw_list.clear()
+        cmd_heading_list.clear()
 
 
 if __name__ == '__main__':
