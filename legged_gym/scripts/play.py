@@ -50,9 +50,11 @@ def play(args):
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
 
     all_obs = []
+    all_lin_vel_obs = []
 
     obs = env.get_observations()
     all_obs.append(obs.cpu().numpy())
+    all_lin_vel_obs.append(obs[:, 0:3].cpu().numpy() * 0) # placeholder
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
@@ -86,8 +88,9 @@ def play(args):
                 env.gym.simulate(env.sim)
 
         actions = policy(obs.detach())
-        obs, _, rews, dones, infos = env.step(actions.detach())
+        obs, lin_vel_obs, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
+        all_lin_vel_obs.append(lin_vel_obs.cpu().numpy())
 
         # if (i % int(env.max_episode_length) == 1):
         #     input("press to play")
@@ -169,6 +172,20 @@ def play(args):
                     axs1[i].set_title(label)
                     if i == 11:
                         axs1[i].legend()
+
+                fig2, axs2 = plt.subplots(3, 1, figsize=(12,8))
+                axs_vel = axs_vel.flatten()
+                labels = ["vel_x", "vel_y", "vel_z"]
+
+                for i in range(3):
+                    true_lin_vel = [x[i] / 2 for x in all_lin_vel_obs]
+                    axs2[i].plot(true_lin_vel, label="true")
+
+                    if i < 2:
+                        target_lin_vel = [x[i] / env.obs_scales.lin_vel for x in lin_x_y_yaw_commands]
+                        axs2[i].plot(target_lin_vel, label="target")
+
+                    axs2[i].set_title(labels[i])
 
                 plt.show()
                 input("Continue by entering.")
