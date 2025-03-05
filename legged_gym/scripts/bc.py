@@ -162,10 +162,10 @@ def train(args):
 
             # action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
             dof_action_losses = F.mse_loss(pred_actions, actions_batch.to("cuda:0"), reduction="none")
-            dof_action_losses /= dof_action_losses.mean()
+            (d1,d2) = dof_action_losses.shape
+            dof_action_losses = torch.sum(dof_action_losses, dim=0)
+            dof_action_losses /= d1 * d2
             action_loss = dof_action_losses.sum()
-
-            print(f"Comparison between {F.mse_loss(pred_actions, actions_batch.to('cuda:0'))} and {action_loss}")
 
             value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
             (action_loss + value_loss).backward()
@@ -192,13 +192,14 @@ def train(args):
             "infos": None,
             }, f"{SAVE_PATH}/model.pt")
 
+        dof_action_losses_str = ", ".join([f"{ep_dof_action_losses[i].item():8.4f}" for i in range(12)])
+
         print(
             (
                 f"Epoch {epoch+1:4d}/{NUM_EPOCHS:4d} | "
                 f"Elapsed Time {elapsed_time:8.2f} |"
                 f"Action Loss: {ep_action_loss.item():8.4f} | "
-                f"Action Loss {i}: {ep_dof_action_losses[i].item():8.4f} | "
-                " | ".join([f"dof {i}: {ep_dof_action_losses[i].item():8.4f}" for i in range(12)]) + " | "
+                f"DOF Losses: {dof_action_losses_str} | "
                 f"Value Loss: {ep_value_loss.item():8.2f}"
             )
         )
@@ -213,9 +214,8 @@ def train(args):
             ]
         )
 
-        for i in range(len(cmd_vel_x_list)):
-            rows = zip(cmd_vel_x_list, cmd_vel_y_list, cmd_vel_yaw_list, cmd_heading_list)
-            cmd_vel_writer.writerows(rows)
+        rows = zip(cmd_vel_x_list, cmd_vel_y_list, cmd_vel_yaw_list, cmd_heading_list)
+        cmd_vel_writer.writerows(rows)
 
         # Clear the lists after writing to the file
         cmd_vel_x_list.clear()

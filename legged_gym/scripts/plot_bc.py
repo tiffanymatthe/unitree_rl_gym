@@ -1,5 +1,5 @@
 paths = [
-    ...
+    "logs/simple_bc/teacher_1_epochs_x_-1.0_1.0_y_-1.0_1.0_yaw_-1_1_heading_-3.14_3.14"
 ]
 
 import matplotlib.pyplot as plt
