@@ -87,7 +87,6 @@ def train(args):
                 )
                 value = actor_critic.evaluate(buffer_observations[step].to(args.rl_device))
 
-                # QUESTION: if epoch == 0, should I use action from act_inference (deterministic) or stochastic action?
                 if epoch >= NUM_TEACHER_EPOCHS:
                     stochastic_action = student_actor_critic.act(
                         buffer_observations[step,:,3:].to(args.rl_device)

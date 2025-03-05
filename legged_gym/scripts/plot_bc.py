@@ -1,13 +1,5 @@
 paths = [
-    # "logs/behavior_cloning/distill",
-    # order: function for stochastic action for teacher epochs, batch size
-    "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch", # act(), 100k
-    # "logs/behavior_cloning/walking_dagger_1_teacher_inference_50k_batch", # act_inference(), 50k
-    # "logs/behavior_cloning/walking_dagger_1_teacher_inference", # act_inference(), 20k
-    "logs/behavior_cloning/walking_dagger_1_teacher_2", # act(), 50k
-    "logs/behavior_cloning/walking_dagger_1_teacher" # act(), 20k
-    # "logs/behavior_cloning/dagger_10",
-    # "logs/behavior_cloning/dagger_100"
+    ...
 ]
 
 import matplotlib.pyplot as plt
@@ -28,8 +20,29 @@ def read_csv(file_path):
 
 dfs = [read_csv(f"{path}/bc_results.csv") for path in paths]
 
+fig, axs = plt.subplots(4,4, figsize=(20,20))
+axs = axs.flatten()
+
+for i in range(12):
+    ax = axs[i]
+    for path, df in zip(paths, dfs):
+        ax.plot(df["Epoch"], df[f"Dof {i} Action Loss"], label=path)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel(f"Dof {i} Action Loss")
+    ax.set_title(f"Dof {i} Action Loss Comparison")
+    ax.legend()
+
 for path, df in zip(paths, dfs):
-    plt.plot(df["Epoch"], df["Action Loss"], label=path)
+    axs[-1].plot(df["Epoch"], df["Action Loss"], label=path)
+
+# Ensure all plots have the same scales
+all_y_values = [df[f"Dof {i} Action Loss"] for df in dfs for i in range(12)]
+all_y_values = [df["Action Loss"] for df in dfs] + all_y_values
+all_y_values_flat = [item for sublist in all_y_values for item in sublist]
+y_min, y_max = min(all_y_values_flat), max(all_y_values_flat)
+
+for ax in axs:
+    ax.set_ylim(y_min, y_max)
 
 plt.xlabel("Epoch")
 plt.ylabel("Action Loss")
