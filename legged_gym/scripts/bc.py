@@ -8,25 +8,20 @@ import csv
 import time
 import torch.nn.functional as F
 
-# python3 legged_gym/scripts/bc.py
-# python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning  --load_run=distilled_policy
-# 1034 finished runs, with total avg rewards of 22.570068359375
-
-# python3 legged_gym/scripts/bc.py # with dagger new commit
-# python legged_gym/scripts/play.py --task=go2_less --experiment_name=behavior_cloning --load_run=dagger
-# 922 finished runs, with total avg rewards of 25.417621612548828
-
-# for comparison
-# python legged_gym/scripts/play.py --task=go2 --load_run=Dec04_15-02-59_normal_walk 
-# 904 finished runs, with total avg rewards of 27.316011428833008
-
-NUM_EPOCHS = 500
+NUM_EPOCHS = 200
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-SAVE_PATH = "logs/behavior_cloning/walking_dagger_1_teacher_100k_batch"
-TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 NUM_TEACHER_EPOCHS = 1
+
+lin_vel_x = [-1.0, 1.0] # min max [m/s]
+lin_vel_y = [-1.0, 1.0]   # min max [m/s]
+ang_vel_yaw = [-1, 1]    # min max [rad/s]
+heading = [-3.14, 3.14]
+
+SAVE_PATH = f"logs/simple_bc/teacher_{NUM_TEACHER_EPOCHS}_epochs_x_{lin_vel_x[0]}_{lin_vel_x[1]}_y_{lin_vel_y[0]}_{lin_vel_y[1]}_yaw_{ang_vel_yaw[0]}_{ang_vel_yaw[1]}_heading_{heading[0]}_{heading[1]}"
+
+TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
     model = ActorCritic(
@@ -47,6 +42,11 @@ def load_model(model_path, num_obs, device="cuda:0"):
     return model
 
 def train(args):
+    args.cfg.env_cfg.commands.ranges.lin_vel_x = lin_vel_x
+    args.cfg.env_cfg.commands.ranges.lin_vel_y = lin_vel_y
+    args.cfg.env_cfg.commands.ranges.ang_vel_yaw = ang_vel_yaw
+    args.cfg.env_cfg.commands.ranges.heading = heading
+
     env, env_cfg = task_registry.make_env(name=args.task, args=args)
     # env1, env_cfg1 = task_registry.make_env(name=args.task1, args=args)
     obs_shape = (48,)
@@ -71,7 +71,7 @@ def train(args):
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
 
     obs = env.reset()[0]
-    buffer_observations[0].copy_(obs.to("cpu"))
+    buffer_observations[-1].copy_(obs.to("cpu"))
 
     file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
     writer = csv.writer(file)
