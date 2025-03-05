@@ -3,10 +3,13 @@ from legged_gym.envs import * # required to prevent circular imports
 from legged_gym.utils import get_args, task_registry
 from rsl_rl.modules import ActorCritic
 
+from legged_gym.envs.go2.go2_config import GO2RoughCfg, GO2RoughCfgPPO
+
 import torch
 import csv
 import time
 import torch.nn.functional as F
+import os
 
 NUM_EPOCHS = 200
 BATCH_SIZE = 100000
@@ -42,12 +45,15 @@ def load_model(model_path, num_obs, device="cuda:0"):
     return model
 
 def train(args):
-    args.cfg.env_cfg.commands.ranges.lin_vel_x = lin_vel_x
-    args.cfg.env_cfg.commands.ranges.lin_vel_y = lin_vel_y
-    args.cfg.env_cfg.commands.ranges.ang_vel_yaw = ang_vel_yaw
-    args.cfg.env_cfg.commands.ranges.heading = heading
+    ppo_cfg = GO2RoughCfgPPO()
+    cfg = GO2RoughCfg()
+    cfg.commands.ranges.lin_vel_x = lin_vel_x
+    cfg.commands.ranges.lin_vel_y = lin_vel_y
+    cfg.commands.ranges.ang_vel_yaw = ang_vel_yaw
+    cfg.commands.ranges.heading = heading
+    cfg.seed = ppo_cfg.seed
 
-    env, env_cfg = task_registry.make_env(name=args.task, args=args)
+    env, env_cfg = task_registry.make_env(name=args.task, args=args, env_cfg=cfg)
     # env1, env_cfg1 = task_registry.make_env(name=args.task1, args=args)
     obs_shape = (48,)
     obs_dim = 48
@@ -72,6 +78,8 @@ def train(args):
 
     obs = env.reset()[0]
     buffer_observations[-1].copy_(obs.to("cpu"))
+
+    os.makedirs(SAVE_PATH, exist_ok=True)
 
     file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
     writer = csv.writer(file)
@@ -135,7 +143,7 @@ def train(args):
             dof_action_losses /= dof_action_losses.mean()
             action_loss = dof_action_losses.sum()
 
-            print(f"Comparison between {F.mse_loss(pred_actions, actions_batch.to("cuda:0"))} and {action_loss}")
+            print(f"Comparison between {F.mse_loss(pred_actions, actions_batch.to('cuda:0'))} and {action_loss}")
 
             value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
             (action_loss + value_loss).backward()
