@@ -15,7 +15,11 @@ MINI_BATCH_SIZE = 512
 HISTORY_LEN = 6
 NUM_TEACHER_EPOCHS = 50
 
-SAVE_PATH = "logs/behavior_cloning/walking_chained_hist_len_6_base_teacher_50_w_0_1_w_5"
+DETACH = False
+EST_WEIGHT = 0.1
+POL_WEIGHT = 5
+
+SAVE_PATH = f"logs/double_bc/hist_len_{HISTORY_LEN}_detach_{DETACH}_teacher_epochs_{NUM_TEACHER_EPOCHS}_weights_{EST_WEIGHT}_{POL_WEIGHT}"
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
 def load_model(model_path, num_obs, device="cuda:0"):
@@ -185,10 +189,13 @@ def train(args):
             pred_estimator_actions = estimator.act_inference(estimator_observations_batch.to("cuda:0"))
             modified_observations_batch = observations_batch.clone()
             if NUM_EPOCHS > NUM_TEACHER_EPOCHS:
-                modified_observations_batch[:,0:3] = pred_estimator_actions #.detach()
+                if DETACH:
+                    modified_observations_batch[:,0:3] = pred_estimator_actions.detach()
+                else:
+                    modified_observations_batch[:,0:3] = pred_estimator_actions
             pred_student_actions = student_actor_critic.act_inference(modified_observations_batch.to("cuda:0"))
-            estimator_action_loss = F.mse_loss(pred_estimator_actions, estimator_actions_batch.to("cuda:0")) * 0.1
-            student_action_loss = F.mse_loss(pred_student_actions, student_actions_batch.to("cuda:0")) * 5
+            estimator_action_loss = F.mse_loss(pred_estimator_actions, estimator_actions_batch.to("cuda:0")) * EST_WEIGHT
+            student_action_loss = F.mse_loss(pred_student_actions, student_actions_batch.to("cuda:0")) * POL_WEIGHT
             (estimator_action_loss + student_action_loss).backward()
 
             optimizer.step()
