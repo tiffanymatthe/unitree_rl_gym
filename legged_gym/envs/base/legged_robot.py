@@ -57,7 +57,10 @@ class LeggedRobot(BaseTask):
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         # step physics and render each frame
         self.render()
-        for _ in range(self.cfg.control.decimation):
+        decimation = np.random.randint(max(self.cfg.control.decimation - self.cfg.domain_rand.randomize_decimation, 1), 
+                              self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation)
+        # print(r)
+        for _ in range(decimation):
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
             self.gym.simulate(self.sim)

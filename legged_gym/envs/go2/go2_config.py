@@ -25,6 +25,15 @@ class GO2RoughCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         num_observations = 48 # - 3 - 3
 
+    class domain_rand(LeggedRobotCfg.domain_rand):
+        randomize_friction = True
+        friction_range = [0.5, 1.25]
+        randomize_base_mass = True
+        push_robots = True
+        push_interval_s = 10
+        max_push_vel_xy = 2.
+        randomize_decimation = 2
+
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
@@ -42,6 +51,17 @@ class GO2RoughCfg( LeggedRobotCfg ):
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+
+    class noise( LeggedRobotCfg.noise ):
+        # add_noise = True
+        # noise_level = 1.0 # scales other values
+        class noise_scales( LeggedRobotCfg.noise.noise_scales ):
+            # dof_pos = 0.01
+            # dof_vel = 1.5
+            lin_vel = 0.2
+            # ang_vel = 0.2
+            # gravity = 0.05
+            # height_measurements = 0.1
   
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
