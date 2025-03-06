@@ -1,11 +1,6 @@
 paths = [
-    # "logs/simple_bc/teacher_1_epochs_x_-1.0_1.0_y_-1.0_1.0_yaw_-1_1_heading_-3.14_3.14",
-    # "logs/simple_bc/teacher_1_epochs_x_0_0.7_y_0_0_yaw_0_0_heading_0_0",
-    "logs/simple_bc/teacher_5_epochs_no_value_True_is_mse_False_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0"
-    # "logs/simple_bc/teacher_1_epochs_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0",
-    # "logs/simple_bc/teacher_1_epochs_no_value_True_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0",
-    # "logs/simple_bc/teacher_10_epochs_no_value_True_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0",
-    # "logs/simple_bc/teacher_50_epochs_no_value_True_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0"
+    "logs/simple_bc_new_model/teacher_5_epochs_no_value_True_mse_loss_x_-1_1_y_-1_1_yaw_-1_1_heading_-3.14_3.14",
+    "logs/simple_bc_new_model/teacher_5_epochs_no_value_True_mse_loss_x_0.4_0.4_y_0_0_yaw_0_0_heading_0_0"
 ]
 
 import matplotlib.pyplot as plt

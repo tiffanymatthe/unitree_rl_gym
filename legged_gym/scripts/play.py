@@ -15,7 +15,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 NUM_ENVS = 1
-HAS_LIN_VEL = True
+HAS_LIN_VEL = False
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -197,6 +197,7 @@ def play(args):
                 plt.show()
                 input("Continue by entering.")
             all_obs = []
+            all_lin_vel_obs = []
         all_rews *= ~dones
         all_lin_vel_errs *= ~dones
         all_ang_vel_errs *= ~dones
