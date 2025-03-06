@@ -15,6 +15,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 NUM_ENVS = 1
+HAS_LIN_VEL = True
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -90,7 +91,10 @@ def play(args):
         actions = policy(obs.detach())
         obs, lin_vel_obs, rews, dones, infos = env.step(actions.detach())
         all_obs.append(obs.cpu().numpy())
-        all_lin_vel_obs.append(lin_vel_obs.cpu().numpy())
+        if HAS_LIN_VEL:
+            all_lin_vel_obs.append(obs[:,0:3].cpu().numpy())
+        else:
+            all_lin_vel_obs.append(lin_vel_obs.cpu().numpy())
 
         # if (i % int(env.max_episode_length) == 1):
         #     input("press to play")
@@ -110,12 +114,13 @@ def play(args):
             avg_ang_vel_errs += torch.sum(done_ang_vel_errs / done_length)
             # plot all obs
             if PLOT:
-                angular_velocities = [o[0][0:3] for o in all_obs]
-                grav_vectors= [o[0][3:6] for o in all_obs]
-                lin_x_y_yaw_commands = [o[0][6:9] for o in all_obs]
-                dof_positions = [o[0][9:9+12] for o in all_obs]
-                dof_velocities = [o[0][9+12:9+24] for o in all_obs]
-                policy_output_actions = [o[0][9+24:9+36] for o in all_obs]
+                offset = 0 if not HAS_LIN_VEL else 3
+                angular_velocities = [o[0][0+offset:offset+3] for o in all_obs]
+                grav_vectors= [o[0][3+offset:offset+6] for o in all_obs]
+                lin_x_y_yaw_commands = [o[0][6+offset:offset+9] for o in all_obs]
+                dof_positions = [o[0][9+offset:offset+9+12] for o in all_obs]
+                dof_velocities = [o[0][9+12+offset:offset+9+24] for o in all_obs]
+                policy_output_actions = [o[0][9+24+offset:offset+9+36] for o in all_obs]
                 fig, axs = plt.subplots(3, 2 , figsize=(12,8))
                 axs[0, 0].plot(angular_velocities)
                 axs[0, 0].set_title('Angular Velocities')
