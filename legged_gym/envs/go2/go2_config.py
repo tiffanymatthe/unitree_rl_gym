@@ -30,9 +30,11 @@ class GO2RoughCfg( LeggedRobotCfg ):
         friction_range = [0.5, 1.25]
         randomize_base_mass = True
         push_robots = True
-        push_interval_s = 10
+        push_interval_s = 7.5
         max_push_vel_xy = 2.
-        randomize_decimation = 2
+        randomize_decimation = [-2,10]
+        randomize_stiffness = [0.95, 1.05]
+        randomize_damping = [0.95, 1.05]
 
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:

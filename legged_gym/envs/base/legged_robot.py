@@ -57,9 +57,9 @@ class LeggedRobot(BaseTask):
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         # step physics and render each frame
         self.render()
-        decimation = np.random.randint(max(self.cfg.control.decimation - self.cfg.domain_rand.randomize_decimation, 1), 
-                              self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation)
-        # print(r)
+        decimation = np.random.randint(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[0], 1), 
+                                           self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[1])
+
         for _ in range(decimation):
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
@@ -465,8 +465,17 @@ class LeggedRobot(BaseTask):
             found = False
             for dof_name in self.cfg.control.stiffness.keys():
                 if dof_name in name:
-                    self.p_gains[i] = self.cfg.control.stiffness[dof_name]
-                    self.d_gains[i] = self.cfg.control.damping[dof_name]
+                    p = self.cfg.control.stiffness[dof_name]
+                    d = self.cfg.control.damping[dof_name]
+                    p *= torch.random.uniform(self.cfg.domain_rand.randomize_stiffness[0], 
+                                                self.cfg.domain_rand.randomize_stiffness[1], 
+                                                (1,), device=self.device)
+                    d *= torch.random.uniform(self.cfg.domain_rand.randomize_damping[0], 
+                                                self.cfg.domain_rand.randomize_damping[1], 
+                                                (1,), device=self.device)
+
+                    self.p_gains[i] = p
+                    self.d_gains[i] = d
                     found = True
             if not found:
                 self.p_gains[i] = 0.
