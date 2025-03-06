@@ -1,5 +1,11 @@
 paths = [
-    "logs/simple_bc/teacher_1_epochs_x_-1.0_1.0_y_-1.0_1.0_yaw_-1_1_heading_-3.14_3.14"
+    # "logs/simple_bc/teacher_1_epochs_x_-1.0_1.0_y_-1.0_1.0_yaw_-1_1_heading_-3.14_3.14",
+    # "logs/simple_bc/teacher_1_epochs_x_0_0.7_y_0_0_yaw_0_0_heading_0_0",
+    "logs/simple_bc/teacher_5_epochs_no_value_True_is_mse_False_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0"
+    # "logs/simple_bc/teacher_1_epochs_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0",
+    # "logs/simple_bc/teacher_1_epochs_no_value_True_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0",
+    # "logs/simple_bc/teacher_10_epochs_no_value_True_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0",
+    # "logs/simple_bc/teacher_50_epochs_no_value_True_x_0.21_0.4_y_0_0_yaw_0_0_heading_0_0"
 ]
 
 import matplotlib.pyplot as plt
@@ -20,7 +26,7 @@ def read_csv(file_path):
 
 dfs = [read_csv(f"{path}/bc_results.csv") for path in paths]
 
-cmd_dfs = [read_csv(f"{path}/cmd_vel_data.csv") for path in paths]
+# cmd_dfs = [read_csv(f"{path}/cmd_vel_data.csv") for path in paths]
 
 fig, axs = plt.subplots(4,4, figsize=(20,20))
 axs = axs.flatten()
@@ -46,13 +52,13 @@ y_min, y_max = min(all_y_values_flat), max(all_y_values_flat)
 for ax in axs:
     ax.set_ylim(y_min, y_max)
 
-fig1, axs1 = plt.subplots(4,1, figsize=(12,8))
-axs1 = axs1.flatten()
+# fig1, axs1 = plt.subplots(4,1, figsize=(12,8))
+# axs1 = axs1.flatten()
 
-headers = ["cmd_vel_x","cmd_vel_y","cmd_vel_yaw","cmd_heading"]
-for i, header in enumerate(headers):
-    for path, df in zip(paths, cmd_dfs):
-        axs1[i].hist(df[header], label=path)
-        axs1[i].set_title(header)
+# headers = ["cmd_vel_x","cmd_vel_y","cmd_vel_yaw","cmd_heading"]
+# for i, header in enumerate(headers):
+#     for path, df in zip(paths, cmd_dfs):
+#         axs1[i].hist(df[header], label=path)
+#         axs1[i].set_title(header)
 
 plt.show()

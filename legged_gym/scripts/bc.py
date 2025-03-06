@@ -15,14 +15,54 @@ NUM_EPOCHS = 200
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-NUM_TEACHER_EPOCHS = 1
+NUM_TEACHER_EPOCHS = 5
+IGNORE_VALUE = True
 
-lin_vel_x = [-1.0, 1.0] # min max [m/s]
-lin_vel_y = [-1.0, 1.0]   # min max [m/s]
-ang_vel_yaw = [-1, 1]    # min max [rad/s]
-heading = [-3.14, 3.14]
+lin_vel_x = [0.4,0.4] # min max [m/s]
+lin_vel_y = [0,0]   # min max [m/s]
+ang_vel_yaw = [0,0]    # min max [rad/s]
+heading = [0,0]
 
-SAVE_PATH = f"logs/simple_bc/teacher_{NUM_TEACHER_EPOCHS}_epochs_x_{lin_vel_x[0]}_{lin_vel_x[1]}_y_{lin_vel_y[0]}_{lin_vel_y[1]}_yaw_{ang_vel_yaw[0]}_{ang_vel_yaw[1]}_heading_{heading[0]}_{heading[1]}"
+# ['FL_0' 'FL_1' 'FL_2' 'FR_0' 'FR_1' 'FR_2' 'RL_0' 'RL_1' 'RL_2' 'RR_0' 'RR_1' 'RR_2']
+WEIGHT_HIP = 1
+WEIGHT_THIGH = 1
+WEIGHT_CALF = 1
+JOINT_WEIGHTS = torch.tensor([WEIGHT_HIP, WEIGHT_THIGH, WEIGHT_CALF, WEIGHT_HIP, WEIGHT_THIGH, WEIGHT_CALF, WEIGHT_HIP, WEIGHT_THIGH, WEIGHT_CALF, WEIGHT_HIP, WEIGHT_THIGH, WEIGHT_CALF], device="cuda:0")
+
+def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
+    """
+    Asymmetric MSE Loss (functional version).
+    Penalizes under-prediction (pred < target) more than over-prediction.
+
+    Args:
+        pred: (batch_size, action_dim) - predicted actions from policy.
+        target: (batch_size, action_dim) - expert actions.
+        under_weight: Weight applied to under-prediction errors (should be >= 1.0).
+
+    Returns:
+        Scalar loss (mean across batch and action dimensions).
+    """
+    error = pred - target
+
+    # Mask where prediction is smaller than the target (under-prediction)
+    under_mask = (error < 0).float()
+
+    # Apply higher weight to under-predictions
+    weight = 1.0 + (under_weight - 1.0) * under_mask
+
+    # Weighted MSE loss
+    loss = weight * (error ** 2)
+
+    if reduction == 'mean':
+        return loss.mean()
+    elif reduction == 'sum':
+        return loss.sum()
+    else:
+        return loss
+
+loss_fcn = F.mse_loss
+
+SAVE_PATH = f"logs/simple_bc/teacher_{NUM_TEACHER_EPOCHS}_epochs_no_value_{IGNORE_VALUE}_{loss_fcn.__name__}_x_{lin_vel_x[0]}_{lin_vel_x[1]}_y_{lin_vel_y[0]}_{lin_vel_y[1]}_yaw_{ang_vel_yaw[0]}_{ang_vel_yaw[1]}_heading_{heading[0]}_{heading[1]}"
 
 TEACHER_PATH = "logs/rough_go2/walking/walking_model.pt"
 
@@ -161,13 +201,17 @@ def train(args):
             pred_values = student_actor_critic.evaluate(observations_batch[:,3:].to("cuda:0"))
 
             # action_loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
-            dof_action_losses = F.mse_loss(pred_actions, actions_batch.to("cuda:0"), reduction="none")
+            dof_action_losses = loss_fcn(pred_actions, actions_batch.to("cuda:0"), reduction="none")
             (d1,d2) = dof_action_losses.shape
             dof_action_losses = torch.sum(dof_action_losses, dim=0)
+            dof_action_losses *= JOINT_WEIGHTS
             dof_action_losses /= d1 * d2
             action_loss = dof_action_losses.sum()
 
-            value_loss = F.mse_loss(pred_values, values_batch.to("cuda:0"))
+            if IGNORE_VALUE:
+                value_loss = 0
+            else:
+                value_loss = loss_fcn(pred_values, values_batch.to("cuda:0"))
             (action_loss + value_loss).backward()
 
             optimizer.step()
@@ -175,7 +219,10 @@ def train(args):
             for i in range(12):
                 ep_dof_action_losses[i].add_(dof_action_losses[i].detach())
             ep_action_loss.add_(action_loss.detach())
-            ep_value_loss.add_(value_loss.detach())
+            if IGNORE_VALUE:
+                ep_value_loss.add_(0)
+            else:
+                ep_value_loss.add_(value_loss.detach())
 
         L = shuffled_indices_batch.shape[0]
         ep_action_loss.div_(L)

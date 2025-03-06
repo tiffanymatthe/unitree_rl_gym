@@ -18,7 +18,7 @@ class LeggedRobotNoLinVel(LeggedRobot):
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
 
-        self.privileged_obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel), dim=-1)
+        self.privileged_obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,), dim=-1)
 
     def _get_noise_scale_vec(self, cfg):
         """ Sets a vector used to scale the noise added to the observations.

@@ -141,6 +141,8 @@ def play(args):
                 REAL_JOINT_LABELS = np.array(["FR_0","FR_1","FR_2","FL_0","FL_1","FL_2","RR_0","RR_1","RR_2","RL_0","RL_1","RL_2"])
                 REAL_TO_SIM = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
 
+                print(REAL_JOINT_LABELS[REAL_TO_SIM])
+
                 JOINT_LIMITS = {
                     "FR_0": [-0.837758,0.837758],
                     "FR_1": [-1.5708,3.4907],
@@ -155,7 +157,7 @@ def play(args):
                     "RL_1": [-0.5236,4.5379],
                     "RL_2": [-2.7227, -0.83776],
                 }
-
+                
                 for i in range(12):
                     scaled_position = np.array([x[i] / env.obs_scales.dof_pos + env.default_dof_pos[0][i].cpu() for x in dof_positions])
 
@@ -174,11 +176,11 @@ def play(args):
                         axs1[i].legend()
 
                 fig2, axs2 = plt.subplots(3, 1, figsize=(12,8))
-                axs_vel = axs_vel.flatten()
+                axs2 = axs2.flatten()
                 labels = ["vel_x", "vel_y", "vel_z"]
 
                 for i in range(3):
-                    true_lin_vel = [x[i] / 2 for x in all_lin_vel_obs]
+                    true_lin_vel = [x[0][i] / 2 for x in all_lin_vel_obs]
                     axs2[i].plot(true_lin_vel, label="true")
 
                     if i < 2:
