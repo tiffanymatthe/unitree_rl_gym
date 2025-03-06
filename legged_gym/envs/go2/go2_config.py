@@ -72,7 +72,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
             torques = -0.0002
             dof_pos_limits = -10.0
             alive = 0.1
-            dof_vel_limits = -0.25
+            # dof_vel_limits = -0.25
             # feet_air_time = 5
             # stand_still = 5
             tracking_lin_vel = 2.5

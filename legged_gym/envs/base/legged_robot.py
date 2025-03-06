@@ -467,12 +467,10 @@ class LeggedRobot(BaseTask):
                 if dof_name in name:
                     p = self.cfg.control.stiffness[dof_name]
                     d = self.cfg.control.damping[dof_name]
-                    p *= torch.random.uniform(self.cfg.domain_rand.randomize_stiffness[0], 
-                                                self.cfg.domain_rand.randomize_stiffness[1], 
-                                                (1,), device=self.device)
-                    d *= torch.random.uniform(self.cfg.domain_rand.randomize_damping[0], 
-                                                self.cfg.domain_rand.randomize_damping[1], 
-                                                (1,), device=self.device)
+                    p *= np.random.uniform(self.cfg.domain_rand.randomize_stiffness[0], 
+                                                self.cfg.domain_rand.randomize_stiffness[1])
+                    d *= np.random.uniform(self.cfg.domain_rand.randomize_damping[0], 
+                                                self.cfg.domain_rand.randomize_damping[1])
 
                     self.p_gains[i] = p
                     self.d_gains[i] = d
