@@ -62,9 +62,9 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 
 loss_fcn = F.mse_loss
 
-SAVE_PATH = f"logs/simple_bc_new_model/teacher_{NUM_TEACHER_EPOCHS}_epochs_no_value_{IGNORE_VALUE}_{loss_fcn.__name__}_x_{lin_vel_x[0]}_{lin_vel_x[1]}_y_{lin_vel_y[0]}_{lin_vel_y[1]}_yaw_{ang_vel_yaw[0]}_{ang_vel_yaw[1]}_heading_{heading[0]}_{heading[1]}"
+SAVE_PATH = f"logs/simple_bc_new_model/teacher_rand_{NUM_TEACHER_EPOCHS}_epochs_no_value_{IGNORE_VALUE}_{loss_fcn.__name__}_x_{lin_vel_x[0]}_{lin_vel_x[1]}_y_{lin_vel_y[0]}_{lin_vel_y[1]}_yaw_{ang_vel_yaw[0]}_{ang_vel_yaw[1]}_heading_{heading[0]}_{heading[1]}"
 
-TEACHER_PATH = "logs/rough_go2/Mar06_11-05-51_base_walking/model_1500.pt"
+TEACHER_PATH = "logs/rough_go2/Mar06_11-50-57_walking_with_lots_of_rand/model_2000.pt"
 
 # Initialize lists to store the values
 cmd_vel_x_list = []

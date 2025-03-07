@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 
 NUM_ENVS = 1
 HAS_LIN_VEL = False
+PLOT = True
 
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
@@ -78,8 +79,6 @@ def play(args):
 
     num_finishes = 0
     num_terminated_failed = 0
-
-    PLOT = True
 
     for i in tqdm(range(10 * int(env.max_episode_length))):
 
