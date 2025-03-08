@@ -468,11 +468,11 @@ class LeggedRobot(BaseTask):
                     p = self.cfg.control.stiffness[dof_name]
                     d = self.cfg.control.damping[dof_name]
 
-                    p *= (1+np.random.normal(0, self.cfg.domain_rand.randomize_stiffness)
-                            .clip(-3*self.cfg.domain_rand.randomize_stiffness, 
+                    p *= (1+np.clip(np.random.normal(0, self.cfg.domain_rand.randomize_stiffness),
+                                    -3*self.cfg.domain_rand.randomize_stiffness, 
                                     3*self.cfg.domain_rand.randomize_stiffness)) # this gives us a 99.7% confidence interval
-                    d *= (1+np.random.normal(0, self.cfg.domain_rand.randomize_damping)
-                            .clip(-3*self.cfg.domain_rand.randomize_damping, 
+                    d *= (1+np.clip(np.random.normal(0, self.cfg.domain_rand.randomize_damping),
+                                    -3*self.cfg.domain_rand.randomize_damping, 
                                     3*self.cfg.domain_rand.randomize_damping)) # this gives us a 99.7% confidence interval
 
                     self.p_gains[i] = p
