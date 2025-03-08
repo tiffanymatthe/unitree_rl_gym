@@ -15,7 +15,7 @@ from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
-from legged_gym.utils.helpers import class_to_dict
+from legged_gym.utils.helpers import class_to_dict, random_int_gaussian
 from .legged_robot_config import LeggedRobotCfg
 
 class LeggedRobot(BaseTask):
@@ -57,7 +57,7 @@ class LeggedRobot(BaseTask):
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         # step physics and render each frame
         self.render()
-        decimation = np.random.randint(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[0], 1), 
+        decimation = random_int_gaussian(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[0], 1), 
                                            self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[1])
 
         for _ in range(decimation):
@@ -467,12 +467,13 @@ class LeggedRobot(BaseTask):
                 if dof_name in name:
                     p = self.cfg.control.stiffness[dof_name]
                     d = self.cfg.control.damping[dof_name]
-                    p *= torch.random.uniform(self.cfg.domain_rand.randomize_stiffness[0], 
-                                                self.cfg.domain_rand.randomize_stiffness[1], 
-                                                (1,), device=self.device)
-                    d *= torch.random.uniform(self.cfg.domain_rand.randomize_damping[0], 
-                                                self.cfg.domain_rand.randomize_damping[1], 
-                                                (1,), device=self.device)
+
+                    p *= (1+np.random.normal(0, self.cfg.domain_rand.randomize_stiffness)
+                            .clip(-3*self.cfg.domain_rand.randomize_stiffness, 
+                                    3*self.cfg.domain_rand.randomize_stiffness)) # this gives us a 99.7% confidence interval
+                    d *= (1+np.random.normal(0, self.cfg.domain_rand.randomize_damping)
+                            .clip(-3*self.cfg.domain_rand.randomize_damping, 
+                                    3*self.cfg.domain_rand.randomize_damping)) # this gives us a 99.7% confidence interval
 
                     self.p_gains[i] = p
                     self.d_gains[i] = d
