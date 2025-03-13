@@ -57,16 +57,20 @@ class LeggedRobot(BaseTask):
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         # step physics and render each frame
         self.render()
-        decimation = np.random.randint(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[0], 1), 
-                                           self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[1])
+
+        decimation = self.cfg.control.decimation 
+        
+        if self.cfg.domain_rand.add_control_freq:
+            p = int(np.random.exponential(self.cfg.domain_rand.randomize_control_freq_lambda)) # TODO
+            decimation += p # TODO 
 
         self._run_sim(decimation)
         
         self.post_physics_step() # gets observations
 
-        if self.cfg.domain_rand.randomize_delay[0] < self.cfg.domain_rand.randomize_delay[1]:
-            delay = np.random.randint(max(self.cfg.domain_rand.randomize_delay[0], 0),
-                                        self.cfg.domain_rand.randomize_delay[1])
+        if self.cfg.domain_rand.add_delay:
+            delay = np.random.randint(self.cfg.domain_rand.randomize_delay[0],
+                                      self.cfg.domain_rand.randomize_delay[1])
             self._run_sim(delay)
 
         # return clipped obs, clipped states (None), rewards, dones and infos
@@ -233,6 +237,10 @@ class LeggedRobot(BaseTask):
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             for i in range(len(self.body_prop_masses)):
                 body_props[i].mass = self.body_prop_masses[i] # reset masses
+                body_props[i].inertia.x = self.body_prop_inerta[i][0]
+                body_props[i].inertia.y = self.body_prop_inerta[i][1]
+                body_props[i].inertia.z = self.body_prop_inerta[i][2]
+
             body_props = self._process_rigid_body_props(body_props, env_id)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             # self.envs.append(env_handle)
@@ -299,9 +307,27 @@ class LeggedRobot(BaseTask):
         #         print(f"Mass of body {i}: {p.mass} (before randomization)")
         #     print(f"Total mass {sum} (before randomization)")
         # randomize base mass
-        if self.cfg.domain_rand.randomize_base_mass:
-            rng = self.cfg.domain_rand.added_mass_range
-            props[0].mass += np.random.uniform(rng[0], rng[1])
+        if self.cfg.domain_rand.randomize_mass:
+            for i in range(len(props)):
+                pct = self.cfg.domain_rand.limb_mass_change_percent
+                props[i].mass *= (1+np.random.uniform(-pct, pct))
+
+        if self.cfg.domain_rand.randomize_inertia:
+            pct = self.cfg.domain_rand.intertia_change_percent
+
+            props[0].inertia.x.x *= 1+np.random.uniform(-pct, pct)
+            props[0].inertia.y.y *= 1+np.random.uniform(-pct, pct)
+            props[0].inertia.z.z *= 1+np.random.uniform(-pct, pct)
+
+            props[0].inertia.x.y *= 1+np.random.uniform(-pct, pct)
+            props[0].inertia.y.x *= props[0].inertia.x.y
+
+            props[0].inertia.z.y *= 1+np.random.uniform(-pct, pct)
+            props[0].inertia.y.z *= props[0].inertia.z.y
+
+            props[0].inertia.x.z *= 1+np.random.uniform(-pct, pct)
+            props[0].inertia.z.x *= props[0].inertia.x.z
+
         return props
     
     def _post_physics_step_callback(self):
@@ -497,12 +523,10 @@ class LeggedRobot(BaseTask):
                     p = self.cfg.control.stiffness[dof_name]
                     d = self.cfg.control.damping[dof_name]
 
-                    p *= (1+np.clip(np.random.normal(0, self.cfg.domain_rand.randomize_stiffness),
-                                    -3*self.cfg.domain_rand.randomize_stiffness, 
-                                    3*self.cfg.domain_rand.randomize_stiffness)) # this gives us a 99.7% confidence interval
-                    d *= (1+np.clip(np.random.normal(0, self.cfg.domain_rand.randomize_damping),
-                                    -3*self.cfg.domain_rand.randomize_damping, 
-                                    3*self.cfg.domain_rand.randomize_damping)) # this gives us a 99.7% confidence interval
+                    p *= np.random.uniform(-self.cfg.domain_rand.randomize_stiffness[0],
+                                    self.cfg.domain_rand.randomize_stiffness[1])
+                    d *= np.random.uniform(-self.cfg.domain_rand.randomize_damping[0],
+                                    self.cfg.domain_rand.randomize_damping[1])
 
                     self.p_gains[i] = p
                     self.d_gains[i] = d
@@ -623,6 +647,9 @@ class LeggedRobot(BaseTask):
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             if i == 0:
                 self.body_prop_masses = [prop.mass for prop in body_props]
+                self.body_prop_inerta = [np.array([gymapi.Vec3(prop.inertia.x.x, prop.inertia.x.y, prop.inertia.x.z),
+                                                      gymapi.Vec3(prop.inertia.y.x, prop.inertia.y.y, prop.inertia.y.z),
+                                                      gymapi.Vec3(prop.inertia.z.x, prop.inertia.z.y, prop.inertia.z.z)]) for prop in body_props]
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             self.envs.append(env_handle)

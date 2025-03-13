@@ -22,6 +22,8 @@ def play(args):
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
     env_cfg.domain_rand.push_robots = False
+    env_cfg.domain_rand.add_control_freq = False
+    env_cfg.domain_rand.add_delay = False
 
     env_cfg.env.test = True
 
@@ -41,15 +43,15 @@ def play(args):
         print('Exported policy as jit script to: ', path)
 
     for i in range(10*int(env.max_episode_length)):
-        if (i % int(env.max_episode_length) == 0):
-            # Additional Randomization
-            for _ in range(20):
-                env.gym.simulate(env.sim)
+        # if (i % int(env.max_episode_length) == 0):
+        #     # Additional Randomization
+        #     for _ in range(20):
+        #         env.gym.simulate(env.sim)
 
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
-        if (i % int(env.max_episode_length) == 1):
-            input("press to play")
+        # if (i % int(env.max_episode_length) == 1):
+        #     input("press to play")
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
