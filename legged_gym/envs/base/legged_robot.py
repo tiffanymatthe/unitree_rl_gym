@@ -61,7 +61,7 @@ class LeggedRobot(BaseTask):
         decimation = self.cfg.control.decimation 
         
         if self.cfg.domain_rand.add_control_freq:
-            p = int(np.random.exponential(self.cfg.domain_rand.randomize_control_freq_lambda)) # TODO
+            p = int(np.random.exponential(1/self.cfg.domain_rand.randomize_control_freq_lambda) / self.cfg.sim.dt) # TODO
             decimation += p # TODO 
 
         self._run_sim(decimation)

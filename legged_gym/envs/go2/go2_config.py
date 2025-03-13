@@ -37,7 +37,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         max_push_vel_xy = 2.
 
         add_control_freq = True
-        randomize_control_freq_lambda = 5
+        randomize_control_freq_lambda = 500
         add_delay = True
         randomize_delay = [0, 8]
 
