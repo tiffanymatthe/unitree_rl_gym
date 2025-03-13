@@ -523,10 +523,13 @@ class LeggedRobot(BaseTask):
                     p = self.cfg.control.stiffness[dof_name]
                     d = self.cfg.control.damping[dof_name]
 
-                    p *= np.random.uniform(-self.cfg.domain_rand.randomize_stiffness[0],
-                                    self.cfg.domain_rand.randomize_stiffness[1])
-                    d *= np.random.uniform(-self.cfg.domain_rand.randomize_damping[0],
-                                    self.cfg.domain_rand.randomize_damping[1])
+                    if self.cfg.domain_rand.randomize_stiffness:
+                        p *= np.random.uniform(self.cfg.domain_rand.randomize_stiffness_range[0],
+                                    self.cfg.domain_rand.randomize_stiffness_range[1])
+                        
+                    if self.cfg.domain_rand.randomize_damping:
+                        d *= np.random.uniform(self.cfg.domain_rand.randomize_damping_range[0],
+                                    self.cfg.domain_rand.randomize_damping_range[1])
 
                     self.p_gains[i] = p
                     self.d_gains[i] = d
@@ -681,7 +684,7 @@ class LeggedRobot(BaseTask):
         spacing = self.cfg.env.env_spacing
         self.env_origins[:, 0] = spacing * xx.flatten()[:self.num_envs]
         self.env_origins[:, 1] = spacing * yy.flatten()[:self.num_envs]
-        self.env_origins[:, 2] = 0.
+        self.env_origins[:, 2] = 0.5
 
     def _parse_cfg(self, cfg):
         self.dt = self.cfg.control.decimation * self.sim_params.dt
