@@ -98,6 +98,7 @@ class LeggedRobotCfg(BaseConfig):
         push_interval_s = 15
         max_push_vel_xy = 1.
         randomize_decimation = [0, 0]
+        randomize_delay = [0, 0]
         randomize_stiffness = 0 # standard dev
         randomize_damping = 0 # standard dev
 
