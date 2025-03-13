@@ -15,7 +15,7 @@ from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
 from legged_gym.utils.isaacgym_utils import get_euler_xyz as get_euler_xyz_in_tensor
-from legged_gym.utils.helpers import class_to_dict, random_int_gaussian
+from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
 
 class LeggedRobot(BaseTask):
@@ -57,16 +57,17 @@ class LeggedRobot(BaseTask):
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         # step physics and render each frame
         self.render()
-        decimation = random_int_gaussian(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[0], 1), 
+        decimation = np.random.randint(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[0], 1), 
                                            self.cfg.control.decimation + self.cfg.domain_rand.randomize_decimation[1])
 
         self._run_sim(decimation)
         
         self.post_physics_step() # gets observations
 
-        delay = random_int_gaussian(max(self.cfg.control.decimation + self.cfg.domain_rand.randomize_delay[0], 0),
-                                    self.cfg.control.decimation + self.cfg.domain_rand.randomize_delay[1])
-        self._run_sim(delay)
+        if self.cfg.domain_rand.randomize_delay[0] < self.cfg.domain_rand.randomize_delay[1]:
+            delay = np.random.randint(max(self.cfg.domain_rand.randomize_delay[0], 0),
+                                        self.cfg.domain_rand.randomize_delay[1])
+            self._run_sim(delay)
 
         # return clipped obs, clipped states (None), rewards, dones and infos
         clip_obs = self.cfg.normalization.clip_observations
@@ -230,6 +231,8 @@ class LeggedRobot(BaseTask):
             env_handle = self.envs[env_id]
             actor_handle = self.actor_handles[env_id]
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
+            for i in range(len(self.body_prop_masses)):
+                body_props[i].mass = self.body_prop_masses[i] # reset masses
             body_props = self._process_rigid_body_props(body_props, env_id)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             # self.envs.append(env_handle)
@@ -618,6 +621,8 @@ class LeggedRobot(BaseTask):
             self.gym.set_actor_dof_properties(env_handle, actor_handle, dof_props)
 
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
+            if i == 0:
+                self.body_prop_masses = [prop.mass for prop in body_props]
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             self.envs.append(env_handle)
@@ -634,8 +639,6 @@ class LeggedRobot(BaseTask):
         self.termination_contact_indices = torch.zeros(len(termination_contact_names), dtype=torch.long, device=self.device, requires_grad=False)
         for i in range(len(termination_contact_names)):
             self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], termination_contact_names[i])
-
-    def _
 
     def _get_env_origins(self):
         """ Sets environment origins. On rough terrain the origins are defined by the terrain platforms.

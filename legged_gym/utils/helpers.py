@@ -159,19 +159,6 @@ def export_policy_as_jit(actor_critic, path):
         traced_script_module = torch.jit.script(model)
         traced_script_module.save(path)
 
-
-def random_int_gaussian(high, low, size=1):
-    sigma = min((high-low)/2, 3) 
-    normal = np.random.normal(loc=0, scale=1, size=size)
-    normal = np.clip(normal, -sigma, sigma)
-    scaling_factor = (high-low) / (2*sigma)
-    normal_scaled = normal * scaling_factor
-    normal_scaled += low + (high-low)/2
-    if size==1:
-        return int(np.round(normal_scaled))
-    else:
-        return np.round(normal_scaled)
-
 class PolicyExporterLSTM(torch.nn.Module):
     def __init__(self, actor_critic):
         super().__init__()
