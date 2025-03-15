@@ -160,6 +160,7 @@ class LeggedRobot(BaseTask):
 
         self._resample_commands(env_ids)
         self._resample_masses(env_ids)
+        self._resample_friction(env_ids)
         self._resample_pd_gains(env_ids)
 
         # reset buffers
@@ -250,11 +251,15 @@ class LeggedRobot(BaseTask):
             # self.actor_handles.append(actor_handle)
     
     def _resample_friction(self, env_ids):
+        if not self.cfg.domain_rand.randomize_friction:
+            return
         for env_id in env_ids:
             rigid_shape_props = self._process_rigid_shape_props(self.rigid_shape_props_asset, env_id)
             self.gym.set_asset_rigid_shape_properties(self.robot_asset, rigid_shape_props)
 
     def _resample_pd_gains(self, env_ids):
+        if not self.cfg.domain_rand.randomize_stiffness and not self.cfg.domain_rand.randomize_damping:
+            return
         for i in range(self.num_dofs):
             name = self.dof_names[i]
             found = False
