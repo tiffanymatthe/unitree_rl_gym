@@ -28,6 +28,8 @@ def play(args):
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
     env_cfg.domain_rand.push_robots = False
+    env_cfg.domain_rand.add_control_freq = False
+    env_cfg.domain_rand.add_delay = False
 
     env_cfg.env.test = True
     
