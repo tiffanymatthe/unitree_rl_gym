@@ -37,6 +37,7 @@ class LeggedRobot(BaseTask):
         self.height_samples = None
         self.debug_viz = False
         self.init_done = False
+        self.lammy = 0
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
 
@@ -61,8 +62,11 @@ class LeggedRobot(BaseTask):
         decimation = self.cfg.control.decimation 
         
         if self.cfg.domain_rand.add_control_freq:
-            p = int(np.random.exponential(1/self.cfg.domain_rand.randomize_control_freq_lambda) / self.cfg.sim.dt) # TODO
-            decimation += p # TODO 
+            if np.random.rand() < 0.25:
+                # update lammy
+                self.lammy = np.random.randint(self.cfg.domain_rand.randomize_control_freq_lambda[0], self.cfg.domain_rand.randomize_control_freq_lambda[1])
+            p = int(np.random.exponential(1/self.lammy) / self.cfg.sim.dt)
+            decimation += p
 
         self._run_sim(decimation)
         
@@ -158,6 +162,7 @@ class LeggedRobot(BaseTask):
 
         self._resample_commands(env_ids)
         self._resample_masses(env_ids)
+        self._resample_pd_gains(env_ids)
 
         # reset buffers
         self.last_actions[env_ids] = 0.
@@ -245,6 +250,37 @@ class LeggedRobot(BaseTask):
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             # self.envs.append(env_handle)
             # self.actor_handles.append(actor_handle)
+    
+    def _resample_friction(self, env_ids):
+        for env_id in env_ids:
+            rigid_shape_props = self._process_rigid_shape_props(self.rigid_shape_props_asset, env_id)
+            self.gym.set_asset_rigid_shape_properties(self.robot_asset, rigid_shape_props)
+
+    def _resample_pd_gains(self, env_ids):
+        for i in range(self.num_dofs):
+            name = self.dof_names[i]
+            found = False
+            for dof_name in self.cfg.control.stiffness.keys():
+                if dof_name in name:
+                    p = self.cfg.control.stiffness[dof_name]
+                    d = self.cfg.control.damping[dof_name]
+
+                    if self.cfg.domain_rand.randomize_stiffness:
+                        p *= np.random.uniform(self.cfg.domain_rand.randomize_stiffness_range[0],
+                                    self.cfg.domain_rand.randomize_stiffness_range[1], size=len(env_ids))
+                        
+                    if self.cfg.domain_rand.randomize_damping:
+                        d *= np.random.uniform(self.cfg.domain_rand.randomize_damping_range[0],
+                                    self.cfg.domain_rand.randomize_damping_range[1], size=len(env_ids))
+
+                    self.p_gains[env_ids, i] = p
+                    self.d_gains[env_ids, i] = d
+                    found = True
+            if not found:
+                self.p_gains[env_ids, i] = 0.
+                self.d_gains[env_ids, i] = 0.
+                if self.cfg.control.control_type in ["P", "V"]:
+                    print(f"PD gain of joint {name} were not defined, setting them to zero")
 
     def _process_rigid_shape_props(self, props, env_id):
         """ Callback allowing to store/change/randomize the rigid shape properties of each environment.
@@ -313,20 +349,21 @@ class LeggedRobot(BaseTask):
                 props[i].mass *= (1+np.random.uniform(-pct, pct))
 
         if self.cfg.domain_rand.randomize_inertia:
-            pct = self.cfg.domain_rand.intertia_change_percent
+            for i in range(len(props)):
+                pct = self.cfg.domain_rand.intertia_change_percent
 
-            props[0].inertia.x.x *= 1+np.random.uniform(-pct, pct)
-            props[0].inertia.y.y *= 1+np.random.uniform(-pct, pct)
-            props[0].inertia.z.z *= 1+np.random.uniform(-pct, pct)
+                props[i].inertia.x.x *= 1+np.random.uniform(-pct, pct)
+                props[i].inertia.y.y *= 1+np.random.uniform(-pct, pct)
+                props[i].inertia.z.z *= 1+np.random.uniform(-pct, pct)
 
-            props[0].inertia.x.y *= 1+np.random.uniform(-pct, pct)
-            props[0].inertia.y.x *= props[0].inertia.x.y
+                props[i].inertia.x.y *= 1+np.random.uniform(-pct, pct)
+                props[i].inertia.y.x *= props[i].inertia.x.y
 
-            props[0].inertia.z.y *= 1+np.random.uniform(-pct, pct)
-            props[0].inertia.y.z *= props[0].inertia.z.y
+                props[i].inertia.z.y *= 1+np.random.uniform(-pct, pct)
+                props[i].inertia.y.z *= props[i].inertia.z.y
 
-            props[0].inertia.x.z *= 1+np.random.uniform(-pct, pct)
-            props[0].inertia.z.x *= props[0].inertia.x.z
+                props[i].inertia.x.z *= 1+np.random.uniform(-pct, pct)
+                props[i].inertia.z.x *= props[i].inertia.x.z
 
         return props
     
@@ -342,7 +379,7 @@ class LeggedRobot(BaseTask):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5*wrap_to_pi(self.commands[:, 3] - heading), -1., 1.)
 
-        if self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
+        if self.cfg.domain_rand.push_robots and (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
             self._push_robots()
 
     def _resample_commands(self, env_ids):
@@ -496,8 +533,8 @@ class LeggedRobot(BaseTask):
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.p_gains = torch.zeros(self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.d_gains = torch.zeros(self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.p_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        self.d_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_dof_vel = torch.zeros_like(self.dof_vel)
@@ -525,18 +562,18 @@ class LeggedRobot(BaseTask):
 
                     if self.cfg.domain_rand.randomize_stiffness:
                         p *= np.random.uniform(self.cfg.domain_rand.randomize_stiffness_range[0],
-                                    self.cfg.domain_rand.randomize_stiffness_range[1])
+                                    self.cfg.domain_rand.randomize_stiffness_range[1], size=self.num_envs)
                         
                     if self.cfg.domain_rand.randomize_damping:
                         d *= np.random.uniform(self.cfg.domain_rand.randomize_damping_range[0],
-                                    self.cfg.domain_rand.randomize_damping_range[1])
+                                    self.cfg.domain_rand.randomize_damping_range[1], size=self.num_envs)
 
-                    self.p_gains[i] = p
-                    self.d_gains[i] = d
+                    self.p_gains[:, i] = p
+                    self.d_gains[:, i] = d
                     found = True
             if not found:
-                self.p_gains[i] = 0.
-                self.d_gains[i] = 0.
+                self.p_gains[:, i] = 0.
+                self.d_gains[:, i] = 0.
                 if self.cfg.control.control_type in ["P", "V"]:
                     print(f"PD gain of joint {name} were not defined, setting them to zero")
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
