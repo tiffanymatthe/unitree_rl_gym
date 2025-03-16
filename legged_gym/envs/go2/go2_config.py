@@ -28,22 +28,22 @@ class GO2RoughCfg( LeggedRobotCfg ):
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
         friction_range = [0.5, 1.25]
-        randomize_mass = True
+        # randomize_mass = True
         limb_mass_change_percent = 0.2 # 10%
-        randomize_inertia = True
+        # randomize_inertia = True
         intertia_change_percent = 0.5 # 10%
         push_robots = True
         push_interval_s = 7.5
         max_push_vel_xy = 2.
 
-        add_control_freq = True
+        # add_control_freq = True
         randomize_control_freq_lambda = 500
-        add_delay = True
+        # add_delay = True
         randomize_delay = [0, 8]
 
-        randomize_stiffness = True
+        # randomize_stiffness = True
         randomize_stiffness_range = [0.7, 1.3]
-        randomize_damping = True
+        # randomize_damping = True
         randomize_damping_range = [0.7, 1.3]
 
 
@@ -90,20 +90,6 @@ class GO2RoughCfg( LeggedRobotCfg ):
             tracking_ang_vel = 1.5
 
         soft_dof_vel_limit = 0.017395 * 10
-        #     lin_vel_z = 0 # requires base_lin_vel[:,2], don't have so must be 0 weight
-        #     # ang_vel_xy = 0 # requires base_ang_vel[:,:2], default is -0.05
-        #     # orientation = 0 # requires projected_gravity, it is 0 anyways in base config
-        #     base_height = -175 # scale might be very off
-        #     tracking_lin_vel = 0
-        #     tracking_ang_vel = 0
-        #     feet_air_time = 0
-        #     stumble = 0
-        #     stand_still = 0
-        #     alive = 15
-        #     # feet_contact_forces = 0
-        #     dof_vel_limits = -2
-            
-        # soft_dof_vel_limit = 0.017395 * 2
         
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
