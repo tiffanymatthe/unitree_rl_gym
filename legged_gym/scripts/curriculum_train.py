@@ -22,7 +22,6 @@ class CurriculumTrainer():
         curriculum_steps = [
             ("rewards.scales.orientation", -20), # helpful to prevent robot from falling onto its head
             ("rewards.scales.stand_still", -50), # helpful to learn standing behaviors
-            ("domain_rand.push_robots", True),
             ("domain_rand.randomize_mass", True),
             ("domain_rand.randomize_inertia", True),
             ("domain_rand.randomize_stiffness", True),
@@ -49,7 +48,7 @@ class CurriculumTrainer():
         self.ppo_runner.env = self.env
         max_its = self.train_cfg.runner.max_iterations
         if self.i == 1:
-            max_its *= 2
+            max_its = 1000
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
         self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
 

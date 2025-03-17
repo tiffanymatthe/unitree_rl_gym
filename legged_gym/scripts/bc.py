@@ -62,9 +62,9 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 
 loss_fcn = F.mse_loss
 
-SAVE_PATH = f"logs/curr_mar_17/dagger_stand_still"
+SAVE_PATH = f"logs/curr_mar_17/dagger_stiffness"
 
-TEACHER_PATH = "logs/rough_go2/Mar17_14-17-54_curr_mar_17/curriculum_3_rewards.scales.stand_still.pt"
+TEACHER_PATH = "logs/rough_go2/Mar17_14-17-54_curr_mar_17/curriculum_7_domain_rand.randomize_stiffness.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -122,10 +122,10 @@ def train(args):
     curriculum_steps = [
         ("rewards.scales.orientation", -20), # helpful to prevent robot from falling onto its head
         ("rewards.scales.stand_still", -50), # helpful to learn standing behaviors
-        # ("domain_rand.push_robots", True),
-        # ("domain_rand.randomize_mass", True),
-        # ("domain_rand.randomize_inertia", True),
-        # ("domain_rand.randomize_stiffness", True),
+        ("domain_rand.push_robots", True),
+        ("domain_rand.randomize_mass", True),
+        ("domain_rand.randomize_inertia", True),
+        ("domain_rand.randomize_stiffness", True),
         # ("domain_rand.randomize_damping", True),
         # ("domain_rand.add_control_freq", True),
         # ("domain_rand.add_delay", True),

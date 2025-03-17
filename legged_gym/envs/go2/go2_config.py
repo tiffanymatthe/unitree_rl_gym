@@ -32,7 +32,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         limb_mass_change_percent = 0.2 # 10%
         # randomize_inertia = True
         intertia_change_percent = 0.5 # 10%
-        # push_robots = True
+        push_robots = True
         push_interval_s = 7.5
         max_push_vel_xy = 2.
         # add_control_freq = True
