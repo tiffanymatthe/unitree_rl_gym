@@ -26,7 +26,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         num_observations = 48 # - 3 - 3
 
     class domain_rand(LeggedRobotCfg.domain_rand):
-        randomize_friction = True
+        # randomize_friction = True
         friction_range = [0.05, 1.25]
         # randomize_mass = True
         limb_mass_change_percent = 0.2 # 10%

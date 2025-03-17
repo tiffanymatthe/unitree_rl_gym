@@ -25,9 +25,11 @@ class CurriculumTrainer():
             ("rewards.scales.stand_still", -50),
             ("domain_rand.randomize_mass", True),
             ("domain_rand.randomize_inertia", True),
-            ("domain_rand.add_control_freq", True),
             ("domain_rand.randomize_stiffness", True),
-            ("domain_rand.damping", True),
+            ("domain_rand.randomize_damping", True),
+            ("domain_rand.add_control_freq", True),
+            ("domain_rand.add_delay", True),
+            ("domain_rand.randomize_friction", True),
         ]
 
         for attr_path, value in curriculum_steps:
