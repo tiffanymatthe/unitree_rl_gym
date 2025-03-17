@@ -66,6 +66,23 @@ SAVE_PATH = f"logs/simple_bc_new_model/teacher_rand_{NUM_TEACHER_EPOCHS}_epochs_
 
 TEACHER_PATH = "logs/rough_go2/Mar06_11-50-57_walking_with_lots_of_rand/model_2000.pt"
 
+os.makedirs(SAVE_PATH, exist_ok=True)
+
+# Save parameters to a text file
+params_file_path = os.path.join(SAVE_PATH, "parameters.txt")
+with open(params_file_path, "w") as params_file:
+    params_file.write(f"NUM_TEACHER_EPOCHS: {NUM_TEACHER_EPOCHS}\n")
+    params_file.write(f"NUM_EPOCHS: {NUM_EPOCHS}\n")
+    params_file.write(f"BATCH_SIZE: {BATCH_SIZE}\n")
+    params_file.write(f"MINI_BATCH_SIZE: {MINI_BATCH_SIZE}\n")
+    params_file.write(f"LOSS_FUNCTION: {loss_fcn.__name__}\n")
+    params_file.write(f"LIN_VEL_X: {lin_vel_x}\n")
+    params_file.write(f"LIN_VEL_Y: {lin_vel_y}\n")
+    params_file.write(f"ANG_VEL_YAW: {ang_vel_yaw}\n")
+    params_file.write(f"HEADING: {heading}\n")
+    params_file.write(f"TEACHER_PATH: {TEACHER_PATH}\n")
+
+
 # Initialize lists to store the values
 cmd_vel_x_list = []
 cmd_vel_y_list = []
@@ -124,8 +141,6 @@ def train(args):
 
     obs = env.reset()[0]
     buffer_observations[-1].copy_(obs.to("cpu"))
-
-    os.makedirs(SAVE_PATH, exist_ok=True)
 
     file = open(f"{SAVE_PATH}/bc_results.csv", mode="w", newline='')
     writer = csv.writer(file)
