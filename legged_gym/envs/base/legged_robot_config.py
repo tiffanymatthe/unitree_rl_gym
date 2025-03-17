@@ -94,17 +94,17 @@ class LeggedRobotCfg(BaseConfig):
         thickness = 0.01
 
     class domain_rand:
-        randomize_friction = True
+        randomize_friction = False
         friction_range = [0.5, 1.25]
-        randomize_mass = True
+        randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
-        randomize_inertia = True
+        randomize_inertia = False
         intertia_change_percent = 0.5 # 10%
-        push_robots = True
+        push_robots = False
         push_interval_s = 15
         max_push_vel_xy = 1.
         add_control_freq = False
-        randomize_control_freq_lambda = 5
+        randomize_control_freq_lambda = [125,1000]
 
         add_delay = False
         randomize_delay = [0, 8]

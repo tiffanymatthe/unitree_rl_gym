@@ -62,9 +62,9 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 
 loss_fcn = F.mse_loss
 
-SAVE_PATH = f"logs/simple_bc_new_model/teacher_rand_{NUM_TEACHER_EPOCHS}_epochs_no_value_{IGNORE_VALUE}_{loss_fcn.__name__}_x_{lin_vel_x[0]}_{lin_vel_x[1]}_y_{lin_vel_y[0]}_{lin_vel_y[1]}_yaw_{ang_vel_yaw[0]}_{ang_vel_yaw[1]}_heading_{heading[0]}_{heading[1]}"
+SAVE_PATH = f"logs/curr_mar_17/dagger_stand_still"
 
-TEACHER_PATH = "logs/rough_go2/Mar06_11-50-57_walking_with_lots_of_rand/model_2000.pt"
+TEACHER_PATH = "logs/rough_go2/Mar17_14-17-54_curr_mar_17/curriculum_3_rewards.scales.stand_still.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -117,7 +117,30 @@ def train(args):
     cfg.seed = ppo_cfg.seed
 
     env, env_cfg = task_registry.make_env(name=args.task, args=args, env_cfg=cfg)
-    # env1, env_cfg1 = task_registry.make_env(name=args.task1, args=args)
+
+    # Define curriculum modifications
+    curriculum_steps = [
+        ("rewards.scales.orientation", -20), # helpful to prevent robot from falling onto its head
+        ("rewards.scales.stand_still", -50), # helpful to learn standing behaviors
+        # ("domain_rand.push_robots", True),
+        # ("domain_rand.randomize_mass", True),
+        # ("domain_rand.randomize_inertia", True),
+        # ("domain_rand.randomize_stiffness", True),
+        # ("domain_rand.randomize_damping", True),
+        # ("domain_rand.add_control_freq", True),
+        # ("domain_rand.add_delay", True),
+        # ("domain_rand.randomize_friction", True),
+    ]
+
+    for attr_path, value in curriculum_steps:
+        # Set attribute dynamically
+        obj = env.cfg
+        *parents, attr = attr_path.split(".")
+        for parent in parents:
+            obj = getattr(obj, parent)
+        setattr(obj, attr, value)
+        print(f"SET attribute {attr_path} to {value}.")
+
     obs_shape = (48,)
     obs_dim = 48
     act_dim = 12

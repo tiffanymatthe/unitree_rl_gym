@@ -16,13 +16,13 @@ class CurriculumTrainer():
     def curriculum_train(self, args):
         self.env, env_cfg = task_registry.make_env(name=args.task, args=args)
         self.ppo_runner, self.train_cfg = task_registry.make_alg_runner(env=self.env, name=args.task, args=args)
-
         self._train()  # Initial training
 
         # Define curriculum modifications
         curriculum_steps = [
-            ("rewards.scales.orientation", -20),
-            ("rewards.scales.stand_still", -50),
+            ("rewards.scales.orientation", -20), # helpful to prevent robot from falling onto its head
+            ("rewards.scales.stand_still", -50), # helpful to learn standing behaviors
+            ("domain_rand.push_robots", True),
             ("domain_rand.randomize_mass", True),
             ("domain_rand.randomize_inertia", True),
             ("domain_rand.randomize_stiffness", True),
@@ -39,16 +39,19 @@ class CurriculumTrainer():
             for parent in parents:
                 obj = getattr(obj, parent)
             setattr(obj, attr, value)
-            print(self.env.cfg.rewards.scales.stand_still)
-            self._train()  # Train after each change
+            print(f"SET attribute {attr_path} to {value}. TRAINING.")
+            self._train(param=attr_path)  # Train after each change
 
 
 
-    def _train(self):
+    def _train(self, param="base"):
         self.i+=1
         self.ppo_runner.env = self.env
-        self.ppo_runner.learn(num_learning_iterations=self.train_cfg.runner.max_iterations, init_at_random_ep_len=True)
-        self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}.pt'))
+        max_its = self.train_cfg.runner.max_iterations
+        if self.i == 1:
+            max_its *= 2
+        self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
+        self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
 
 if __name__ == '__main__':
     args = get_args()
