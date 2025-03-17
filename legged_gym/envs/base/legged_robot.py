@@ -245,7 +245,9 @@ class LeggedRobot(BaseTask):
     def _resample_masses(self, env_ids):
         """ 
         Randomize masses of base links
-        """ 
+        """
+        if not self.cfg.domain_rand.randomize_mass and not self.cfg.domain_rand.randomize_inertia:
+            return
         for env_id in env_ids:
             env_handle = self.envs[env_id]
             actor_handle = self.actor_handles[env_id]
