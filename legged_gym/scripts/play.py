@@ -30,6 +30,8 @@ def play(args):
     env_cfg.domain_rand.push_robots = False
     env_cfg.domain_rand.add_control_freq = False
     env_cfg.domain_rand.add_delay = False
+    env_cfg.domain_rand.randomize_damping = False
+    env_cfg.domain_rand.randomize_stiffness = False
 
     env_cfg.env.test = True
     

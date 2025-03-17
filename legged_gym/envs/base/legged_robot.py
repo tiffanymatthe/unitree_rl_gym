@@ -37,7 +37,7 @@ class LeggedRobot(BaseTask):
         self.height_samples = None
         self.debug_viz = False
         self.init_done = False
-        self.lammy = 0
+        self.lammy = 125
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
 
@@ -170,6 +170,7 @@ class LeggedRobot(BaseTask):
 
         self._resample_commands(env_ids)
         self._resample_masses(env_ids)
+        self._resample_friction(env_ids)
         self._resample_pd_gains(env_ids)
 
         # reset buffers
@@ -261,11 +262,15 @@ class LeggedRobot(BaseTask):
             # self.actor_handles.append(actor_handle)
     
     def _resample_friction(self, env_ids):
+        if not self.cfg.domain_rand.randomize_friction:
+            return
         for env_id in env_ids:
             rigid_shape_props = self._process_rigid_shape_props(self.rigid_shape_props_asset, env_id)
             self.gym.set_asset_rigid_shape_properties(self.robot_asset, rigid_shape_props)
 
     def _resample_pd_gains(self, env_ids):
+        if not self.cfg.domain_rand.randomize_stiffness and not self.cfg.domain_rand.randomize_damping:
+            return
         for i in range(self.num_dofs):
             name = self.dof_names[i]
             found = False
@@ -275,12 +280,12 @@ class LeggedRobot(BaseTask):
                     d = self.cfg.control.damping[dof_name]
 
                     if self.cfg.domain_rand.randomize_stiffness:
-                        p *= np.random.uniform(self.cfg.domain_rand.randomize_stiffness_range[0],
-                                    self.cfg.domain_rand.randomize_stiffness_range[1], size=len(env_ids))
+                        p *= torch_rand_float(self.cfg.domain_rand.randomize_stiffness_range[0],
+                                    self.cfg.domain_rand.randomize_stiffness_range[1], shape=(len(env_ids),1), device=self.device).squeeze(1)
                         
                     if self.cfg.domain_rand.randomize_damping:
-                        d *= np.random.uniform(self.cfg.domain_rand.randomize_damping_range[0],
-                                    self.cfg.domain_rand.randomize_damping_range[1], size=len(env_ids))
+                        d *= torch_rand_float(self.cfg.domain_rand.randomize_damping_range[0],
+                                    self.cfg.domain_rand.randomize_damping_range[1], shape=(len(env_ids),1), device=self.device).squeeze(1)
 
                     self.p_gains[env_ids, i] = p
                     self.d_gains[env_ids, i] = d
@@ -570,12 +575,12 @@ class LeggedRobot(BaseTask):
                     d = self.cfg.control.damping[dof_name]
 
                     if self.cfg.domain_rand.randomize_stiffness:
-                        p *= np.random.uniform(self.cfg.domain_rand.randomize_stiffness_range[0],
-                                    self.cfg.domain_rand.randomize_stiffness_range[1], size=self.num_envs)
+                        p *= torch_rand_float(self.cfg.domain_rand.randomize_stiffness_range[0],
+                                    self.cfg.domain_rand.randomize_stiffness_range[1], shape=(self.num_envs,1), device=self.device).squeeze(1)
                         
                     if self.cfg.domain_rand.randomize_damping:
-                        d *= np.random.uniform(self.cfg.domain_rand.randomize_damping_range[0],
-                                    self.cfg.domain_rand.randomize_damping_range[1], size=self.num_envs)
+                        d *= torch_rand_float(self.cfg.domain_rand.randomize_damping_range[0],
+                                    self.cfg.domain_rand.randomize_damping_range[1], shape=(self.num_envs,1), device=self.device).squeeze(1)
 
                     self.p_gains[:, i] = p
                     self.d_gains[:, i] = d

@@ -96,9 +96,9 @@ class LeggedRobotCfg(BaseConfig):
     class domain_rand:
         randomize_friction = True
         friction_range = [0.5, 1.25]
-        randomize_mass = False
+        randomize_mass = True
         limb_mass_change_percent = 0.2 # 10%
-        randomize_inertia = False
+        randomize_inertia = True
         intertia_change_percent = 0.5 # 10%
         push_robots = True
         push_interval_s = 15
@@ -217,7 +217,7 @@ class LeggedRobotCfgPPO(BaseConfig):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 24 # per iteration
-        max_iterations = 500 # number of policy updates
+        max_iterations = 250 # number of policy updates
 
         # logging
         save_interval = 50 # check for potential saves every this many iterations
