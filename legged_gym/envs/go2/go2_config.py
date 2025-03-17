@@ -35,7 +35,6 @@ class GO2RoughCfg( LeggedRobotCfg ):
         push_robots = True
         push_interval_s = 7.5
         max_push_vel_xy = 2.
-
         # add_control_freq = True
         randomize_control_freq_lambda = [125,1000]
         # add_delay = True
@@ -98,4 +97,6 @@ class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
         run_name = ''
         experiment_name = 'rough_go2'
 
-  
+class GO2RoughNoLinVelCfg( GO2RoughCfg ):
+    class env (GO2RoughCfg.env ):
+        num_observations = 45

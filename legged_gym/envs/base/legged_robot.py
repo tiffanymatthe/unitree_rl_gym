@@ -62,7 +62,9 @@ class LeggedRobot(BaseTask):
         decimation = self.cfg.control.decimation 
         
         if self.cfg.domain_rand.add_control_freq:
-            self.lammy = np.random.randint(self.cfg.domain_rand.randomize_control_freq_lambda[0], self.cfg.domain_rand.randomize_control_freq_lambda[1])
+            if np.random.rand() < 0.25:
+                # update lammy
+                self.lammy = np.random.randint(self.cfg.domain_rand.randomize_control_freq_lambda[0], self.cfg.domain_rand.randomize_control_freq_lambda[1])
             p = int(np.random.exponential(1/self.lammy) / self.cfg.sim.dt)
             decimation += p
 
@@ -80,6 +82,14 @@ class LeggedRobot(BaseTask):
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
+
+        # add some more metrics (comment when training if it takes too long)
+        self.extras["metrics"] = {}
+        self.extras["metrics"]["lin_vel_xy_error"] = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+        self.extras["metrics"]["ang_vel_error"] = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
+        self.extras["metrics"]["terminated_from_contact"] = torch.logical_and(self.reset_buf, torch.logical_not(self.time_out_buf))
+        self.extras["metrics"]["curr_episode_length"] = self.episode_length_buf_from_reset
+
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def _run_sim(self, steps):
@@ -167,6 +177,7 @@ class LeggedRobot(BaseTask):
         self.last_actions[env_ids] = 0.
         self.last_dof_vel[env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
+        self.episode_length_buf_from_reset[env_ids] = torch.clone(self.episode_length_buf[env_ids])
         self.episode_length_buf[env_ids] = 0
         self.reset_buf[env_ids] = 1
         # fill extras
@@ -275,7 +286,6 @@ class LeggedRobot(BaseTask):
                     if self.cfg.domain_rand.randomize_damping:
                         d *= torch_rand_float(self.cfg.domain_rand.randomize_damping_range[0],
                                     self.cfg.domain_rand.randomize_damping_range[1], shape=(len(env_ids),1), device=self.device).squeeze(1)
-
 
                     self.p_gains[env_ids, i] = p
                     self.d_gains[env_ids, i] = d
