@@ -62,9 +62,9 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 
 loss_fcn = F.mse_loss
 
-SAVE_PATH = f"logs/curr_mar_17/dagger_stiffness"
+SAVE_PATH = f"logs/curr_mar_17/dagger_friction"
 
-TEACHER_PATH = "logs/rough_go2/Mar17_14-17-54_curr_mar_17/curriculum_7_domain_rand.randomize_stiffness.pt"
+TEACHER_PATH = "logs/rough_go2/Mar17_15-51-56_curr_mar_17_again/curriculum_8__randomize_friction.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -120,26 +120,31 @@ def train(args):
 
     # Define curriculum modifications
     curriculum_steps = [
-        ("rewards.scales.orientation", -20), # helpful to prevent robot from falling onto its head
-        ("rewards.scales.stand_still", -50), # helpful to learn standing behaviors
-        ("domain_rand.push_robots", True),
-        ("domain_rand.randomize_mass", True),
-        ("domain_rand.randomize_inertia", True),
-        ("domain_rand.randomize_stiffness", True),
-        # ("domain_rand.randomize_damping", True),
-        # ("domain_rand.add_control_freq", True),
-        # ("domain_rand.add_delay", True),
-        # ("domain_rand.randomize_friction", True),
+        [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
+        [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
+        [("domain_rand.randomize_mass", True),
+        ("domain_rand.randomize_inertia", True)],
+        [("domain_rand.randomize_stiffness", True),
+        ("domain_rand.randomize_damping", True)],
+        [("domain_rand.add_control_freq", True)],
+        [("domain_rand.add_delay", True)],
+        [("domain_rand.randomize_friction", True)],
     ]
 
-    for attr_path, value in curriculum_steps:
-        # Set attribute dynamically
-        obj = env.cfg
-        *parents, attr = attr_path.split(".")
-        for parent in parents:
-            obj = getattr(obj, parent)
-        setattr(obj, attr, value)
-        print(f"SET attribute {attr_path} to {value}.")
+    for attributes in curriculum_steps:
+        title = ""
+        for attr_path, value in attributes:
+            # Set attribute dynamically
+            obj = env.cfg
+            *parents, attr = attr_path.split(".")
+            for parent in parents:
+                obj = getattr(obj, parent)
+            title = f"{title}_{attr}"
+            setattr(obj, attr, value)
+            print(f"SET attribute {attr_path} to {value}. TRAINING.")
+        
+            if "rewards" in attr_path:
+                env.reward_scales[attr] = value
 
     obs_shape = (48,)
     obs_dim = 48
