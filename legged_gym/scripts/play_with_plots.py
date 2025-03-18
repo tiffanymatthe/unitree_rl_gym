@@ -15,7 +15,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 NUM_ENVS = 1
-HAS_LIN_VEL = False
+HAS_LIN_VEL = True
 PLOT = True
 
 def play(args):
@@ -32,6 +32,11 @@ def play(args):
     env_cfg.domain_rand.add_delay = False
     env_cfg.domain_rand.randomize_damping = False
     env_cfg.domain_rand.randomize_stiffness = False
+
+    env_cfg.commands.ranges.lin_vel_x = [0.3,0.3]
+    env_cfg.commands.ranges.lin_vel_y = [0,0]
+    env_cfg.commands.ranges.ang_vel_yaw = [0,0]
+    env_cfg.commands.ranges.heading = [0,0]
 
     env_cfg.env.test = True
     
