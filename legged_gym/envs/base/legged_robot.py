@@ -47,6 +47,26 @@ class LeggedRobot(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
 
+    def _update_cfg(self, cfg=None):
+        """
+        Re-initialize Task for a new config
+        """
+        if cfg != None:
+            self.cfg = cfg
+
+        self._parse_cfg(self.cfg)
+
+        self.num_envs = cfg.env.num_envs
+        self.num_obs = cfg.env.num_observations
+        self.num_privileged_obs = cfg.env.num_privileged_obs
+        self.num_actions = cfg.env.num_actions
+
+        if not self.headless:
+            self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
+        self._init_buffers()
+        self._prepare_reward_function()
+        self.init_done = True
+
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
 

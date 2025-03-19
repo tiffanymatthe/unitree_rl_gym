@@ -41,6 +41,7 @@ class CurriculumTrainer():
                     obj = getattr(obj, parent)
                 title = f"{title}_{attr}"
                 setattr(obj, attr, value)
+                self.env._update_cfg(self.env.cfg) # actually updates reward functions
                 print(f"SET attribute {attr_path} to {value}. TRAINING.")
             
                 if "rewards" in attr_path:
