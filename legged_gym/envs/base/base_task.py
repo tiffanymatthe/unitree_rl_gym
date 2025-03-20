@@ -2,6 +2,7 @@
 import sys
 from isaacgym import gymapi
 from isaacgym import gymutil
+import os
 import numpy as np
 import torch
 
@@ -10,6 +11,9 @@ class BaseTask():
 
     def __init__(self, cfg, sim_params, physics_engine, sim_device, headless):
         self.gym = gymapi.acquire_gym()
+        self.frame = 0
+        self.record_frames = False
+        self.record_frame_path = None
 
         self.sim_params = sim_params
         self.physics_engine = physics_engine
@@ -114,3 +118,20 @@ class BaseTask():
                     self.gym.sync_frame_time(self.sim)
             else:
                 self.gym.poll_viewer_events(self.viewer)
+
+            
+            if self.record_frames:
+                self.gym.write_viewer_image_to_file(self.viewer, self.record_frame_path + f"/{self.frame:06d}.png")
+                self.frame += 1
+
+    def set_recorder(self, record_frame_path):
+        self.frame = 0
+        self.record_frames = True
+        self.record_frame_path = record_frame_path
+        if not os.path.isdir(self.record_frame_path):
+            os.makedirs(self.record_frame_path, exist_ok=True)
+
+    def stop_recorder(self):
+        self.frame = 0
+        self.record_frames = False
+        self.record_frame_path = None

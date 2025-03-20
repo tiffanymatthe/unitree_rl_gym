@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 
-def play(args):
+def play_walk(args, record_frames=False, record_name=""):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 100)
@@ -26,7 +26,7 @@ def play(args):
     # env_cfg.domain_rand.add_delay = False
     # env_cfg.domain_rand.randomize_damping = False
     # env_cfg.domain_rand.randomize_stiffness = False
-    env_cfg.commands.ranges.lin_vel_x = [0.3,0.3]
+    env_cfg.commands.ranges.lin_vel_x = [0.3,0.9]
     env_cfg.commands.ranges.lin_vel_y = [0,0]
     env_cfg.commands.ranges.ang_vel_yaw = [0,0]
     env_cfg.commands.ranges.heading = [0,0]
@@ -41,6 +41,8 @@ def play(args):
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
+    if record_frames:
+        ppo_runner.env.set_recorder(os.path.dirname(task_registry.resume_path) + f"/recordings/play_walk_{record_name}")
     
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
@@ -57,4 +59,4 @@ if __name__ == '__main__':
     RECORD_FRAMES = False
     MOVE_CAMERA = False
     args = get_args()
-    play(args)
+    play_walk(args, True)

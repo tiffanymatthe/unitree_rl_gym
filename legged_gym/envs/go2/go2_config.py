@@ -26,22 +26,22 @@ class GO2RoughCfg( LeggedRobotCfg ):
         num_observations = 48 # - 3 - 3
 
     class domain_rand(LeggedRobotCfg.domain_rand):
-        # randomize_friction = True
+        randomize_friction = False
         friction_range = [0.05, 1.25]
-        # randomize_mass = True
+        randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
-        # randomize_inertia = True
+        randomize_inertia = False
         intertia_change_percent = 0.5 # 10%
-        push_robots = True
-        push_interval_s = 7.5
-        max_push_vel_xy = 2.
-        # add_control_freq = True
+        push_robots = False
+        push_interval_s = 12.5
+        max_push_vel_xy = 1.
+        add_control_freq = False
         randomize_control_freq_lambda = [125,1000]
-        # add_delay = True
+        add_delay = False
         randomize_delay = [0, 8]
-        # randomize_stiffness = True
+        randomize_stiffness = False
         randomize_stiffness_range = [0.7, 1.3]
-        # randomize_damping = True
+        randomize_damping = False
         randomize_damping_range = [0.7, 1.3]
 
 
@@ -63,13 +63,13 @@ class GO2RoughCfg( LeggedRobotCfg ):
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
 
-    class noise( LeggedRobotCfg.noise ):
+    # class noise( LeggedRobotCfg.noise ):
         # add_noise = True
         # noise_level = 1.0 # scales other values
-        class noise_scales( LeggedRobotCfg.noise.noise_scales ):
+        # class noise_scales( LeggedRobotCfg.noise.noise_scales ):
             # dof_pos = 0.01
             # dof_vel = 1.5
-            lin_vel = 0.2
+            # lin_vel = 0.2
             # ang_vel = 0.2
             # gravity = 0.05
             # height_measurements = 0.1
@@ -77,15 +77,15 @@ class GO2RoughCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
-        class scales( LeggedRobotCfg.rewards.scales ):
-            torques = -0.0002
-            dof_pos_limits = -10.0
-            alive = 1
-            dof_vel_limits = -0.25
-            feet_air_time = 5
+        # class scales( LeggedRobotCfg.rewards.scales ):
+            # torques = -0.0002
+            # dof_pos_limits = -10.0
+            # alive = 1
+            # dof_vel_limits = -0.25
+            # feet_air_time = 5
             # stand_still = 5
-            tracking_lin_vel = 2.5
-            tracking_ang_vel = 1.5
+            # tracking_lin_vel = 2.5
+            # tracking_ang_vel = 1.5
 
         soft_dof_vel_limit = 0.017395 * 10
         
