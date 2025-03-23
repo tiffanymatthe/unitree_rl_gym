@@ -17,10 +17,11 @@ class CurriculumTrainer():
     def curriculum_train(self, args):
         self.env, env_cfg = task_registry.make_env(name=args.task, args=args)
         self.ppo_runner, self.train_cfg = task_registry.make_alg_runner(env=self.env, name=args.task, args=args)
-        
+
         self.env.enable_viewer_sync = False
         
-        self._train()  # Initial training
+        if not self.train_cfg.runner.resume:
+            self._train()  # Initial training
         self.args = args
         self._demo(True, "base")
 
@@ -35,8 +36,8 @@ class CurriculumTrainer():
              ("noise.noise_scales.lin_vel", 0.2),],
             [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
             [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
-            [("rewards.scales.base_height", -5000),
-             ("rewards.scales.feet_air_time", 300)],
+            [("rewards.scales.base_height", -1000),
+             ("rewards.scales.feet_air_time", 75)],
             [("domain_rand.push_robots", True)],
             [("domain_rand.randomize_mass", True),
              ("domain_rand.randomize_inertia", True)],
@@ -70,7 +71,7 @@ class CurriculumTrainer():
         self.i+=1
         self.ppo_runner.env = self.env
         max_its = self.train_cfg.runner.max_iterations
-        if self.i == 1:
+        if self.i == 1 and not self.train_cfg.runner.resume:
             max_its = 1000
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
         self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))

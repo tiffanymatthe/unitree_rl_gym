@@ -163,8 +163,8 @@ class LeggedRobotCfg(BaseConfig):
     # viewer camera:
     class viewer:
         ref_env = 0
-        pos = [10, 0, 6]  # [m]
-        lookat = [11., 5, 3.]  # [m]
+        pos = [15, 0, 2]  # [m]
+        lookat = [15., 6, 1.]  # [m]
 
     class sim:
         dt =  0.005
@@ -217,7 +217,7 @@ class LeggedRobotCfgPPO(BaseConfig):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 24 # per iteration
-        max_iterations = 250 # number of policy updates
+        max_iterations = 200 # number of policy updates
 
         # logging
         save_interval = 50 # check for potential saves every this many iterations
