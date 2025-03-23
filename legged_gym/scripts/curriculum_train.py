@@ -29,23 +29,23 @@ class CurriculumTrainer():
         curriculum_steps = [
             [("rewards.scales.torques", -0.0002),
              ("rewards.scales.dof_pos_limits", -10.0),
-            #  ("rewards.scales.alive", 1),
+             ("rewards.scales.alive", 1),
              ("rewards.scales.dof_vel_limits", -0.25),
              ("rewards.scales.tracking_lin_vel", 2.5),
              ("rewards.scales.tracking_ang_vel", 1.5),
              ("noise.noise_scales.lin_vel", 0.2),],
-            [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
-            [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
-            [("rewards.scales.base_height", -1000),
-             ("rewards.scales.feet_air_time", 75)],
-            [("domain_rand.push_robots", True)],
+            # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
+            # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
+            # [("rewards.scales.base_height", -1000),
+            #  ("rewards.scales.feet_air_time", 75)],
+            # [("domain_rand.push_robots", True)],
             [("domain_rand.randomize_mass", True),
              ("domain_rand.randomize_inertia", True)],
             [("domain_rand.randomize_stiffness", True),
              ("domain_rand.randomize_damping", True)],
             [("domain_rand.add_control_freq", True)],
             [("domain_rand.add_delay", True)],
-            [("domain_rand.randomize_friction", True)],
+            # [("domain_rand.randomize_friction", True)],
         ]
 
         for attributes in curriculum_steps:
@@ -72,7 +72,7 @@ class CurriculumTrainer():
         self.ppo_runner.env = self.env
         max_its = self.train_cfg.runner.max_iterations
         if self.i == 1 and not self.train_cfg.runner.resume:
-            max_its = 1000
+            max_its = 1500
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
         self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
 

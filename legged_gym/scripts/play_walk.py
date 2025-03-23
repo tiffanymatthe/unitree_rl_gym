@@ -59,4 +59,4 @@ if __name__ == '__main__':
     RECORD_FRAMES = False
     MOVE_CAMERA = False
     args = get_args()
-    play_walk(args, True)
+    play_walk(args, False)

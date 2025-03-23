@@ -47,10 +47,6 @@ class LeggedRobotCfg(BaseConfig):
             lin_vel_y = [-1.0, 1.0]   # min max [m/s]
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-3.14, 3.14]
-            # lin_vel_x = [0.25, 0.25] # min max [m/s]
-            # lin_vel_y = [0.25, 0.25]   # min max [m/s]
-            # ang_vel_yaw = [0, 0]    # min max [rad/s]
-            # heading = [0, 0]
 
     class init_state:
         pos = [0.0, 0.0, 1.] # x,y,z [m]
@@ -94,13 +90,13 @@ class LeggedRobotCfg(BaseConfig):
         thickness = 0.01
 
     class domain_rand:
-        randomize_friction = False
+        randomize_friction = True
         friction_range = [0.5, 1.25]
         randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
         randomize_inertia = False
         intertia_change_percent = 0.5 # 10%
-        push_robots = False
+        push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1.
         add_control_freq = False

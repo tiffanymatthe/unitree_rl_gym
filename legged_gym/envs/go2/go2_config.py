@@ -26,14 +26,14 @@ class GO2RoughCfg( LeggedRobotCfg ):
         num_observations = 48 # - 3 - 3
 
     class domain_rand(LeggedRobotCfg.domain_rand):
-        randomize_friction = False
+        randomize_friction = True
         friction_range = [0.05, 1.25]
         randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
         randomize_inertia = False
         intertia_change_percent = 0.5 # 10%
-        push_robots = False
-        push_interval_s = 12.5
+        push_robots = True
+        push_interval_s = 15
         max_push_vel_xy = 1.
         add_control_freq = False
         randomize_control_freq_lambda = [125,1000]
@@ -77,9 +77,9 @@ class GO2RoughCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
-        # class scales( LeggedRobotCfg.rewards.scales ):
-            # torques = -0.0002
-            # dof_pos_limits = -10.0
+        class scales( LeggedRobotCfg.rewards.scales ):
+            torques = -0.0002
+            dof_pos_limits = -10.0
             # alive = 1
             # dof_vel_limits = -0.25
             # feet_air_time = 5
