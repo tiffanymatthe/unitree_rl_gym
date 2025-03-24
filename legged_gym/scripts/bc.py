@@ -62,9 +62,9 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 
 loss_fcn = F.mse_loss
 
-SAVE_PATH = f"logs/curr_mar_17/dagger_friction"
+SAVE_PATH = f"logs/curr_mar_23/dagger_no_domain_randomization"
 
-TEACHER_PATH = "logs/rough_go2/Mar17_15-51-56_curr_mar_17_again/curriculum_8__randomize_friction.pt"
+TEACHER_PATH = "logs/rough_go2/Mar23_16-34-22_mar_23_good_walking/curriculum_2__torques_dof_pos_limits_alive_dof_vel_limits_tracking_lin_vel_tracking_ang_vel_lin_vel.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -120,15 +120,27 @@ def train(args):
 
     # Define curriculum modifications
     curriculum_steps = [
-        [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
-        [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
-        [("domain_rand.randomize_mass", True),
-        ("domain_rand.randomize_inertia", True)],
-        [("domain_rand.randomize_stiffness", True),
-        ("domain_rand.randomize_damping", True)],
-        [("domain_rand.add_control_freq", True)],
-        [("domain_rand.add_delay", True)],
-        [("domain_rand.randomize_friction", True)],
+        [
+            ("rewards.scales.torques", -0.0002),
+            ("rewards.scales.dof_pos_limits", -10.0),
+            ("rewards.scales.alive", 1),
+            ("rewards.scales.dof_vel_limits", -0.25),
+            ("rewards.scales.tracking_lin_vel", 2.5),
+            ("rewards.scales.tracking_ang_vel", 1.5),
+            ("noise.noise_scales.lin_vel", 0.2),
+        ],
+        # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
+        # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
+        # [("rewards.scales.base_height", -1000),
+        #  ("rewards.scales.feet_air_time", 75)],
+        # [("domain_rand.push_robots", True)],
+        # [("domain_rand.randomize_mass", True),
+        #     ("domain_rand.randomize_inertia", True)],
+        # [("domain_rand.randomize_stiffness", True),
+        #     ("domain_rand.randomize_damping", True)],
+        # [("domain_rand.add_control_freq", True)],
+        # [("domain_rand.add_delay", True)],
+        # [("domain_rand.randomize_friction", True)],
     ]
 
     for attributes in curriculum_steps:
@@ -141,6 +153,7 @@ def train(args):
                 obj = getattr(obj, parent)
             title = f"{title}_{attr}"
             setattr(obj, attr, value)
+            env._update_cfg(env.cfg) # actually updates reward functions
             print(f"SET attribute {attr_path} to {value}. TRAINING.")
         
             if "rewards" in attr_path:

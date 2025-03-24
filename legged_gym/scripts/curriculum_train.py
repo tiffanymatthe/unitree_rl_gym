@@ -23,7 +23,7 @@ class CurriculumTrainer():
         if not self.train_cfg.runner.resume:
             self._train()  # Initial training
         self.args = args
-        self._demo(True, "base")
+        # self._demo(True, "base")
 
         # Define curriculum modifications
         curriculum_steps = [
@@ -65,7 +65,7 @@ class CurriculumTrainer():
                     self.env.reward_scales[attr] = value
 
             self._train(param=title)  # Train after each change
-            self._demo(True, title)
+            # self._demo(True, title)
 
     def _train(self, param="base"):
         self.i+=1
