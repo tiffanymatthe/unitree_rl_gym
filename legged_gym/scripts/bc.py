@@ -1,3 +1,16 @@
+"""
+python3 legged_gym/scripts/bc.py
+
+THINGS TO EDIT BEFORE RUNNING (see TO EDIT comments in the code):
+
+SAVE_PATH: givea folder where the behavior-cloned policy will be saved to
+TEACHER_PATH: give the path to the teacher model
+
+curriculum_steps: make sure the environments are updated with the proper settings (randomization settings)
+- you can also comment this out and just "hardcode" the changes in go2_config.py
+
+"""
+
 import isaacgym
 from legged_gym.envs import * # required to prevent circular imports
 from legged_gym.utils import get_args, task_registry
@@ -62,8 +75,10 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 
 loss_fcn = F.mse_loss
 
+# TO EDIT
 SAVE_PATH = f"logs/curr_mar_23/dagger_delay"
 
+# TO EDIT
 TEACHER_PATH = "logs/rough_go2/Mar23_16-34-22_mar_23_good_walking/curriculum_6__add_delay.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
@@ -118,7 +133,7 @@ def train(args):
 
     env, env_cfg = task_registry.make_env(name=args.task, args=args, env_cfg=cfg)
 
-    # Define curriculum modifications
+    # TO EDIT
     curriculum_steps = [
         [
             ("rewards.scales.torques", -0.0002),
