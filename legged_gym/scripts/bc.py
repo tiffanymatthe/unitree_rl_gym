@@ -3,11 +3,15 @@ python3 legged_gym/scripts/bc.py
 
 THINGS TO EDIT BEFORE RUNNING (see TO EDIT comments in the code):
 
-SAVE_PATH: givea folder where the behavior-cloned policy will be saved to
+SAVE_PATH: give a folder where the behavior-cloned policy will be saved to
 TEACHER_PATH: give the path to the teacher model
 
 curriculum_steps: make sure the environments are updated with the proper settings (randomization settings)
 - you can also comment this out and just "hardcode" the changes in go2_config.py
+
+To play the saved model (if SAVE_PATH = f"logs/curr_mar_23/dagger_delay"), run
+
+python3 legged_gym/scripts/play.py --task go2_less --experiment_name curr_mar_23 --run_name dagger_delay
 
 """
 
