@@ -19,15 +19,15 @@ def play_walk(args, record_frames=False, record_name=""):
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
-    # env_cfg.noise.add_noise = False
-    # env_cfg.domain_rand.randomize_friction = False
-    # env_cfg.domain_rand.push_robots = False
-    # env_cfg.domain_rand.add_control_freq = False
-    # env_cfg.domain_rand.add_delay = False
-    # env_cfg.domain_rand.randomize_damping = False
-    # env_cfg.domain_rand.randomize_stiffness = False
-    env_cfg.commands.ranges.lin_vel_x = [0.4,0.4]
-    env_cfg.commands.ranges.lin_vel_y = [0.4,0.4]
+    env_cfg.noise.add_noise = True
+    env_cfg.domain_rand.randomize_friction = True
+    env_cfg.domain_rand.push_robots = True
+    env_cfg.domain_rand.add_control_freq = True
+    env_cfg.domain_rand.add_delay = True
+    env_cfg.domain_rand.randomize_damping = True
+    env_cfg.domain_rand.randomize_stiffness = True
+    env_cfg.commands.ranges.lin_vel_x = [0.3,0.9]
+    env_cfg.commands.ranges.lin_vel_y = [0,0]
     env_cfg.commands.ranges.ang_vel_yaw = [0,0]
     env_cfg.commands.ranges.heading = [0,0]
 

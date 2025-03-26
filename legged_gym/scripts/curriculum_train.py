@@ -29,10 +29,10 @@ class CurriculumTrainer():
         curriculum_steps = [
             [("rewards.scales.torques", -0.0002),
              ("rewards.scales.dof_pos_limits", -10.0),
-             ("rewards.scales.alive", 1),
-             ("rewards.scales.dof_vel_limits", -0.25),
-             ("rewards.scales.tracking_lin_vel", 2.5),
-             ("rewards.scales.tracking_ang_vel", 1.5),
+            #  ("rewards.scales.alive", 1),
+            #  ("rewards.scales.dof_vel_limits", -0.25),
+             ("rewards.scales.tracking_lin_vel", 5),
+             ("rewards.scales.tracking_ang_vel", 3),
              ("noise.noise_scales.lin_vel", 0.2),],
             # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
             # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors

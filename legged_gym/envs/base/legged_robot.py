@@ -268,6 +268,7 @@ class LeggedRobot(BaseTask):
         """
         if not self.cfg.domain_rand.randomize_mass and not self.cfg.domain_rand.randomize_inertia:
             return
+        print("resampling masses")
         for env_id in env_ids:
             env_handle = self.envs[env_id]
             actor_handle = self.actor_handles[env_id]
