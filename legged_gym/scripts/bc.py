@@ -80,10 +80,10 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 loss_fcn = F.mse_loss
 
 # TO EDIT
-SAVE_PATH = f"logs/curr_mar_23/dagger_delay"
+SAVE_PATH = f"logs/curr_mar_27/terrain_calf"
 
 # TO EDIT
-TEACHER_PATH = "logs/rough_go2/Mar23_16-34-22_mar_23_good_walking/curriculum_6__add_delay.pt"
+TEACHER_PATH = "logs/rough_go2/Mar27_15-57-04_0_7_1_1_calf_stiffness_terrain_no_slip_rew/curriculum_5__add_delay.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -136,18 +136,21 @@ def train(args):
     cfg.seed = ppo_cfg.seed
 
     env, env_cfg = task_registry.make_env(name=args.task, args=args, env_cfg=cfg)
-
+    
     # TO EDIT
     curriculum_steps = [
-        [
-            ("rewards.scales.torques", -0.0002),
+        # [("commands.ranges.lin_vel_x", [0, 0.4]), # min max [m/s]
+        #  ("commands.ranges.lin_vel_y", [0, 0]),
+        #  ("commands.ranges.ang_vel_yaw", [0, 0]),
+        #  ("commands.ranges.heading", [0, 0])],
+        [("rewards.scales.torques", -0.0002),
             ("rewards.scales.dof_pos_limits", -10.0),
-            ("rewards.scales.alive", 1),
-            ("rewards.scales.dof_vel_limits", -0.25),
-            ("rewards.scales.tracking_lin_vel", 2.5),
-            ("rewards.scales.tracking_ang_vel", 1.5),
-            ("noise.noise_scales.lin_vel", 0.2),
-        ],
+        #  ("rewards.scales.alive", 1),
+        #  ("rewards.scales.dof_vel_limits", -0.25),
+            ("rewards.scales.tracking_lin_vel", 5),
+            ("rewards.scales.tracking_ang_vel", 3),
+            ("noise.noise_scales.lin_vel", 0.2), ],
+        #  ("rewards.scales.slippage", -1e10),],
         # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
         # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
         # [("rewards.scales.base_height", -1000),
@@ -326,7 +329,7 @@ def train(args):
             )
         )
 
-        print("saved to", f"{SAVE_PATH}/model.pt")
+        # print("saved to", f"{SAVE_PATH}/model.pt")
         writer.writerow(
             [
                 epoch+1,

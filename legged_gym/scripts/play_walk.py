@@ -28,7 +28,7 @@ def play_walk(args, record_frames=False, record_name=""):
     # env_cfg.domain_rand.add_delay = True
     # env_cfg.domain_rand.randomize_damping = True
     # env_cfg.domain_rand.randomize_stiffness = True
-    env_cfg.commands.ranges.lin_vel_x = [0.3,0.9]
+    env_cfg.commands.ranges.lin_vel_x = [0.3,0.3]
     env_cfg.commands.ranges.lin_vel_y = [0,0]
     env_cfg.commands.ranges.ang_vel_yaw = [0,0]
     env_cfg.commands.ranges.heading = [0,0]
@@ -58,7 +58,7 @@ def play_walk(args, record_frames=False, record_name=""):
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
-    RECORD_FRAMES = False
+    RECORD_FRAMES = True
     MOVE_CAMERA = False
     args = get_args()
-    play_walk(args, False)
+    play_walk(args, RECORD_FRAMES)

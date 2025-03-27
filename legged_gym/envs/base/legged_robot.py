@@ -307,8 +307,12 @@ class LeggedRobot(BaseTask):
                     d = self.cfg.control.damping[dof_name]
 
                     if self.cfg.domain_rand.randomize_stiffness:
-                        p *= torch_rand_float(self.cfg.domain_rand.randomize_stiffness_range[0],
-                                    self.cfg.domain_rand.randomize_stiffness_range[1], shape=(len(env_ids),1), device=self.device).squeeze(1)
+                        if "calf" in name:
+                            p *= torch_rand_float(self.cfg.domain_rand.randomize_stiffness_range_calf[0],
+                                        self.cfg.domain_rand.randomize_stiffness_range_calf[1], shape=(len(env_ids),1), device=self.device).squeeze(1)
+                        else:
+                            p *= torch_rand_float(self.cfg.domain_rand.randomize_stiffness_range[0],
+                                        self.cfg.domain_rand.randomize_stiffness_range[1], shape=(len(env_ids),1), device=self.device).squeeze(1)
                         
                     if self.cfg.domain_rand.randomize_damping:
                         d *= torch_rand_float(self.cfg.domain_rand.randomize_damping_range[0],

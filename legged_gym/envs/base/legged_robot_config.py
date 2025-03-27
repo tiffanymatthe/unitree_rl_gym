@@ -107,6 +107,7 @@ class LeggedRobotCfg(BaseConfig):
         randomize_delay = [0, 8]
         randomize_stiffness = False
         randomize_stiffness_range = [0.5, 2]
+        randomize_stiffness_range_calf = randomize_stiffness_range
         randomize_damping = False
         randomize_damping_range = [0.5, 2]
 

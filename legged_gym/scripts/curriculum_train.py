@@ -37,8 +37,8 @@ class CurriculumTrainer():
             #  ("rewards.scales.dof_vel_limits", -0.25),
              ("rewards.scales.tracking_lin_vel", 5),
              ("rewards.scales.tracking_ang_vel", 3),
-             ("noise.noise_scales.lin_vel", 0.2),
-             ("rewards.scales.slippage", -1e10),],
+             ("noise.noise_scales.lin_vel", 0.2), ],
+            #  ("rewards.scales.slippage", -1e10),],
             # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
             # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
             # [("rewards.scales.base_height", -1000),
