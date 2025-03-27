@@ -9,6 +9,7 @@ from legged_gym.envs import *
 from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Logger
 
 import pprint
+import pickle
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -201,6 +202,9 @@ def play(args):
                         axs2[i].plot(target_lin_vel, label="target")
 
                     axs2[i].set_title(labels[i])
+
+                pickle.dump([axs, axs1, axs2], open("plot.pickle", "wb"))
+                print("DUMPED")
 
                 plt.show()
                 input("Continue by entering.")
