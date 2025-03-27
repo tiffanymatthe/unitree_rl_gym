@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 from isaacgym.torch_utils import *
-from isaacgym import gymtorch, gymapi, gymutil
+from isaacgym import gymtorch, gymapi, gymutil, terrain_utils
 
 import torch
 from torch import Tensor
@@ -109,6 +109,10 @@ class LeggedRobot(BaseTask):
         self.extras["metrics"]["ang_vel_error"] = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
         self.extras["metrics"]["terminated_from_contact"] = torch.logical_and(self.reset_buf, torch.logical_not(self.time_out_buf))
         self.extras["metrics"]["curr_episode_length"] = self.episode_length_buf_from_reset
+
+
+        # print(self.contact_forces[:, self.feet_indices, :][0])
+        # print(torch.sum(self.contact_forces[:, self.feet_indices, :2], dim=(1,2)).shape)
 
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
@@ -268,6 +272,7 @@ class LeggedRobot(BaseTask):
         """
         if not self.cfg.domain_rand.randomize_mass and not self.cfg.domain_rand.randomize_inertia:
             return
+        
         for env_id in env_ids:
             env_handle = self.envs[env_id]
             actor_handle = self.actor_handles[env_id]
@@ -649,6 +654,35 @@ class LeggedRobot(BaseTask):
         plane_params.restitution = self.cfg.terrain.restitution
         self.gym.add_ground(self.sim, plane_params)
 
+        if not self.cfg.terrain.plane:
+            t_cfg = self.cfg.terrain
+
+            num_terains = 10 # TODO clean up 
+            terrain_width = 15.
+            terrain_length = 15.
+            horizontal_scale = t_cfg.horizontal_scale # [m]
+            vertical_scale = t_cfg.vertical_scale # [m]
+            num_rows = int(terrain_width/horizontal_scale)
+            num_cols = int(terrain_length/horizontal_scale)
+
+            heightfield = np.zeros((num_terains*num_rows, num_terains*num_cols), dtype=np.int16)
+
+            for i in range(num_terains-1):
+                for j in range(num_terains-1):
+                    t = terrain_utils.SubTerrain(width=num_rows, length=num_cols, vertical_scale=vertical_scale, horizontal_scale=horizontal_scale)
+                    heightfield[num_rows*i:num_rows*(i+1), num_rows*j:num_rows*(j+1)] = terrain_utils.random_uniform_terrain(t, min_height=0, max_height=0.1, step=0.01, downsampled_scale=0.5).height_field_raw
+
+            print("done generating heightfeild")
+            vertices, triangles = terrain_utils.convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=1.5)
+            print("done converting heightfeild")
+            tm_params = gymapi.TriangleMeshParams()
+            tm_params.nb_vertices = vertices.shape[0]
+            tm_params.nb_triangles = triangles.shape[0]
+            tm_params.transform.p.x = -terrain_width
+            tm_params.transform.p.y = -terrain_width
+            self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
+            print("done adding terrain")
+
     def _create_envs(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,
@@ -852,6 +886,13 @@ class LeggedRobot(BaseTask):
         self.feet_air_time *= ~contact_filt
         return rew_airTime
     
+    def _reward_slippage(self):
+        no_contact = (self.contact_forces[:, self.feet_indices, 2] < 1)
+        side_forces= (self.contact_forces[:, self.feet_indices, :2].norm(dim=2))
+        contact = no_contact * side_forces
+
+        return torch.sum(contact, dim = 1)
+        
     def _reward_stumble(self):
         # Penalize feet hitting vertical surfaces
         return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\

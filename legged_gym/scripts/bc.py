@@ -326,6 +326,7 @@ def train(args):
             )
         )
 
+        print("saved to", f"{SAVE_PATH}/model.pt")
         writer.writerow(
             [
                 epoch+1,

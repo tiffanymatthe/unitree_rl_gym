@@ -20,6 +20,9 @@ def _create_task(args):
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
+    env_cfg.terrain.plane = True
+    env_cfg.env.env_spacing = 3
+    
     # env_cfg.noise.add_noise = False
     # env_cfg.domain_rand.randomize_friction = False
     # env_cfg.domain_rand.push_robots = False
@@ -59,7 +62,9 @@ def demo(args):
 
     path = os.path.dirname(task_registry.resume_path)
     # print("path:", path)
-    for pt in  tqdm([k for k in os.listdir(path) if 'curriculum_' in k]):
+    files = [k for k in os.listdir(path) if 'curriculum_' in k]
+    files.sort()
+    for pt in  tqdm(files):
         # print("pt:", pt)
         resume_path = os.path.join(path, pt)
         print(f"Loading model from: {resume_path}")
