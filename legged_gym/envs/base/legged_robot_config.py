@@ -93,6 +93,8 @@ class LeggedRobotCfg(BaseConfig):
     class domain_rand:
         randomize_friction = True
         friction_range = [0.5, 1.25]
+        randomize_com = False
+        com_change_percent = 0.2
         randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
         randomize_inertia = False
