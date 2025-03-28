@@ -44,12 +44,14 @@ class CurriculumTrainer():
             # [("rewards.scales.base_height", -1000),
             #  ("rewards.scales.feet_air_time", 75)],
             # [("domain_rand.push_robots", True)],
-            [("domain_rand.randomize_mass", True),
-             ("domain_rand.randomize_inertia", True)],
-            [("domain_rand.randomize_stiffness", True),
-             ("domain_rand.randomize_damping", True)],
-            [("domain_rand.add_control_freq", True)],
-            [("domain_rand.add_delay", True)],
+            [
+                ("domain_rand.randomize_mass", True),
+                ("domain_rand.randomize_inertia", True),
+                ("domain_rand.randomize_stiffness", True),
+                ("domain_rand.randomize_damping", True),
+                ("domain_rand.add_control_freq", True),
+                ("domain_rand.add_delay", True)
+            ],
             # [("domain_rand.randomize_friction", True)],
         ]
 
@@ -77,7 +79,7 @@ class CurriculumTrainer():
         self.ppo_runner.env = self.env
         max_its = self.train_cfg.runner.max_iterations
         if self.i == 1 and not self.train_cfg.runner.resume:
-            max_its = 1500
+            max_its = 1000
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
         self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
 
