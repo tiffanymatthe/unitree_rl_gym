@@ -389,6 +389,14 @@ class LeggedRobot(BaseTask):
                 pct = self.cfg.domain_rand.limb_mass_change_percent
                 props[i].mass *= (1+np.random.uniform(-pct, pct))
 
+        print(props[0].com)
+        if self.cfg.domain_rand.randomize_com:
+            for i in range(len(props)):
+                pct = self.cfg.domain_rand.com_change_percent
+                props[i].com.x *= (1+np.random.uniform(-pct, pct))
+                props[i].com.y *= (1+np.random.uniform(-pct, pct))
+                props[i].com.z *= (1+np.random.uniform(-pct, pct))
+
         if self.cfg.domain_rand.randomize_inertia:
             for i in range(len(props)):
                 pct = self.cfg.domain_rand.intertia_change_percent
