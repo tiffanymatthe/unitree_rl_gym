@@ -892,7 +892,7 @@ class LeggedRobot(BaseTask):
     
     def _reward_slippage(self):
         no_contact = (self.contact_forces[:, self.feet_indices, 2] < 1)
-        side_forces= (self.contact_forces[:, self.feet_indices, :2].norm(dim=2))
+        side_forces = (self.contact_forces[:, self.feet_indices, :2].norm(dim=2))
         contact = no_contact * side_forces
 
         return torch.sum(contact, dim = 1)
