@@ -16,7 +16,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 NUM_ENVS = 1
-HAS_LIN_VEL = True
+HAS_LIN_VEL = False
 PLOT = True
 
 def play(args):
