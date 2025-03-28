@@ -80,10 +80,10 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 loss_fcn = F.mse_loss
 
 # TO EDIT
-SAVE_PATH = f"logs/curr_mar_27/terrain_lower_all_bc"
+SAVE_PATH = f"logs/curr_mar_27/terrain_higher_friction"
 
 # TO EDIT
-TEACHER_PATH = "logs/rough_go2/Mar27_17-41-18_lower_all_bc/curriculum_3__randomize_mass_randomize_inertia_randomize_stiffness_randomize_damping_add_control_freq_add_delay.pt"
+TEACHER_PATH = "logs/rough_go2/Mar27_16-33-27_0_4_1_5_friction/curriculum_6__add_delay.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -156,14 +156,12 @@ def train(args):
         # [("rewards.scales.base_height", -1000),
         #  ("rewards.scales.feet_air_time", 75)],
         # [("domain_rand.push_robots", True)],
-        [
-            ("domain_rand.randomize_mass", True),
-            ("domain_rand.randomize_inertia", True),
-            ("domain_rand.randomize_stiffness", True),
-            ("domain_rand.randomize_damping", True),
-            ("domain_rand.add_control_freq", True),
-            ("domain_rand.add_delay", True)
-        ],
+        [("domain_rand.randomize_mass", True),
+            ("domain_rand.randomize_inertia", True)],
+        [("domain_rand.randomize_stiffness", True),
+            ("domain_rand.randomize_damping", True)],
+        [("domain_rand.add_control_freq", True)],
+        [("domain_rand.add_delay", True)],
         # [("domain_rand.randomize_friction", True)],
     ]
 
