@@ -347,11 +347,9 @@ class LeggedRobot(BaseTask):
     def _resample_motor_strengths(self, env_ids):
         if not self.cfg.domain_rand.randomize_motor_strength:
             return
-        
-        for i in range(self.num_dofs):
-            min_strength, max_strength = self.cfg.domain_rand.motor_strength_range
-            self.motor_strengths[env_ids, :] = torch.rand(len(env_ids), dtype=torch.float, device=self.device,
-                                                     requires_grad=False).unsqueeze(1) * (
+        min_strength, max_strength = self.cfg.domain_rand.motor_strength_range
+        self.motor_strengths[env_ids, :] = torch.rand((len(env_ids), self.num_dofs), dtype=torch.float, device=self.device,
+                                                     requires_grad=False) * (
                                                   max_strength - min_strength) + min_strength
 
     def _process_rigid_shape_props(self, props, env_id):
