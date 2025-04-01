@@ -45,6 +45,9 @@ class GO2RoughCfg( LeggedRobotCfg ):
         randomize_damping = False
         randomize_damping_range = [0.7, 1.3]
 
+        randomize_gravity = False
+        randomize_gravity_accel = 1 # +/- m/s in each direction
+
 
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:

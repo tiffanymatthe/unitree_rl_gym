@@ -300,12 +300,16 @@ class LeggedRobot(BaseTask):
     def _resample_gravity(self, env_ids):
         if not self.cfg.domain_rand.randomize_gravity:
             return
-        g = self.cfg.sim.gravity.copy()
+        g = torch.tensor(self.cfg.sim.gravity.copy(), device=self.device)
         a = self.cfg.domain_rand.randomize_gravity_accel
-        gravs = np.random.uniform(-a, a, (len(env_ids), 3))
+        gravs = torch.rand((len(env_ids), 3), device=self.device) *(2*a) - a
         gravs += g
-        gravs /= np.linalg.norm(gravs, axis=1)
-        self.gravity_vec[env_ids, :] = gravs
+
+        norms = torch.linalg.vector_norm(gravs, dim=1, keepdim=True)
+
+        # Normalize (avoid division by zero)
+        normalized_vectors = torch.where(norms == 0, torch.tensor(0.0, device="cuda"), gravs / norms)
+        self.gravity_vec[env_ids, :] = normalized_vectors
             
 
     def _resample_pd_gains(self, env_ids):
@@ -609,6 +613,7 @@ class LeggedRobot(BaseTask):
         self.extras = {}
         self.noise_scale_vec = self._get_noise_scale_vec(self.cfg)
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
+        self._resample_gravity(torch.arange(self.num_envs, device=self.device))
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
