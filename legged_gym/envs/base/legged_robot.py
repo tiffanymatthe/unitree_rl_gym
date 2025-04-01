@@ -300,12 +300,11 @@ class LeggedRobot(BaseTask):
         if not self.cfg.domain_rand.randomize_gravity:
             return
         g = self.cfg.sim.gravity.copy()
-        rad_range = np.deg2rad(self.cfg.domain_rand.randomize_gravity_angle)
-        r_x = lambda r : np.array([[1, 0, 0], [0, np.cos(r), -np.sin(r)],[0, np.sin(r), np.cos(r)]])
-        r_y = lambda r : np.array([[np.cos(r), 0, np.sin(r)], [0, 1, 0], [-np.sin(r), 0, np.cos(r)]])
-        for env_id in env_ids:
-            x, y = np.random.uniform(-rad_range, rad_range, 2)
-            self.gravity_vec[env_id] = np.dot(r_x(x), np.dot(r_y(y), g))
+        a = self.cfg.domain_rand.randomize_gravity_accel
+        gravs = np.random.uniform(-a, a, (len(env_ids), 3))
+        gravs += g
+        gravs /= np.linalg.norm(gravs, axis=1)
+        self.gravity_vec[env_ids, :] = gravs
             
 
     def _resample_pd_gains(self, env_ids):
