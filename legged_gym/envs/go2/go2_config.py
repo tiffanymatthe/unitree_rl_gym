@@ -30,6 +30,8 @@ class GO2RoughCfg( LeggedRobotCfg ):
         friction_range = [0.5, 1.25]
         randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
+        randomize_base_com = False
+        base_com_change_vec = [0.1, 0.1, 0.1]
         randomize_inertia = False
         intertia_change_percent = 0.5 # 10%
         push_robots = True
