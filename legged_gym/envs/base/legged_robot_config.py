@@ -108,6 +108,9 @@ class LeggedRobotCfg(BaseConfig):
         randomize_gravity = False
         randomize_gravity_accel = 1 # +/- m/s in each direction
 
+        randomize_motor_strength = False
+        motor_strength_range = [0.9, 1.1]
+
         add_delay = False
         randomize_delay = [0, 8]
         randomize_stiffness = False
