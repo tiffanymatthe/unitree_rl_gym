@@ -196,6 +196,7 @@ class LeggedRobot(BaseTask):
         self._resample_masses(env_ids)
         self._resample_friction(env_ids)
         self._resample_pd_gains(env_ids)
+        self._resample_gravity(env_ids)
 
         # reset buffers
         self.last_actions[env_ids] = 0.
@@ -294,6 +295,18 @@ class LeggedRobot(BaseTask):
         for env_id in env_ids:
             rigid_shape_props = self._process_rigid_shape_props(self.rigid_shape_props_asset, env_id)
             self.gym.set_asset_rigid_shape_properties(self.robot_asset, rigid_shape_props)
+
+    def _resample_gravity(self, env_ids):
+        if not self.cfg.domain_rand.randomize_gravity:
+            return
+        g = self.cfg.sim.gravity.copy()
+        rad_range = np.deg2rad(self.cfg.domain_rand.randomize_gravity_angle)
+        r_x = lambda r : np.array([[1, 0, 0], [0, np.cos(r), -np.sin(r)],[0, np.sin(r), np.cos(r)]])
+        r_y = lambda r : np.array([[np.cos(r), 0, np.sin(r)], [0, 1, 0], [-np.sin(r), 0, np.cos(r)]])
+        for env_id in env_ids:
+            x, y = np.random.uniform(-rad_range, rad_range, 2)
+            self.gravity_vec[env_id] = np.dot(r_x(x), np.dot(r_y(y), g))
+            
 
     def _resample_pd_gains(self, env_ids):
         if not self.cfg.domain_rand.randomize_stiffness and not self.cfg.domain_rand.randomize_damping:

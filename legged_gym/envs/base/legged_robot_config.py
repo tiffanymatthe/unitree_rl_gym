@@ -105,6 +105,9 @@ class LeggedRobotCfg(BaseConfig):
         add_control_freq = False
         randomize_control_freq_lambda = [125,1000]
 
+        randomize_gravity = False
+        randomize_gravity_angle = 10 # degrees
+
         add_delay = False
         randomize_delay = [0, 8]
         randomize_stiffness = False
