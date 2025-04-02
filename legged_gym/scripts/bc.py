@@ -80,10 +80,10 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 loss_fcn = F.mse_loss
 
 # TO EDIT
-SAVE_PATH = f"logs/curr_apr_1/terrain"
+SAVE_PATH = f"logs/curr_apr_2/vel_flat"
 
 # TO EDIT
-TEACHER_PATH = "logs/rough_go2/Apr01_21-25-22_dr_terrain/curriculum_6__add_delay.pt"
+TEACHER_PATH = "logs/rough_go2/Apr02_12-36-02_vel_flat/model_900.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -139,33 +139,24 @@ def train(args):
     
     # TO EDIT
     curriculum_steps = [
-        # [("commands.ranges.lin_vel_x", [0, 0.4]), # min max [m/s]
-        #  ("commands.ranges.lin_vel_y", [0, 0]),
-        #  ("commands.ranges.ang_vel_yaw", [0, 0]),
-        #  ("commands.ranges.heading", [0, 0])],
-        [("rewards.scales.torques", -0.0002),
+        [
+            ("rewards.scales.orientation", -1),
+            ("rewards.scales.torques", -0.0002),
             ("rewards.scales.dof_pos_limits", -10.0),
-        #  ("rewards.scales.alive", 1),
-        #  ("rewards.scales.dof_vel_limits", -0.25),
             ("rewards.scales.tracking_lin_vel", 5),
             ("rewards.scales.tracking_ang_vel", 3),
-            ("noise.noise_scales.lin_vel", 0.2), ],
-        #  ("rewards.scales.slippage", -1e10),],
-        # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
-        # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
-        # [("rewards.scales.base_height", -1000),
-        #  ("rewards.scales.feet_air_time", 75)],
-        # [("domain_rand.push_robots", True)],
-        [("domain_rand.randomize_mass", True),
+            ("noise.noise_scales.lin_vel", 0.2),
+        # ("rewards.scales.feet_air_time", 2),
+            ("domain_rand.randomize_mass", True),
             ("domain_rand.randomize_inertia", True),
-            ("domain_rand.randomize_base_com", True)],
-        [("domain_rand.randomize_stiffness", True),
-            ("domain_rand.randomize_damping", True)],
-        [("domain_rand.randomize_motor_strength", True),
+            ("domain_rand.randomize_base_com", True),
+            ("domain_rand.randomize_stiffness", True),
+            ("domain_rand.randomize_damping", True),
+            ("domain_rand.randomize_motor_strength", True),
             ("domain_rand.randomize_motor_offset", True),
-            ("domain_rand.randomize_gravity", True)],
-        [("domain_rand.add_control_freq", True),
-            ("domain_rand.add_delay", True)],
+        ("domain_rand.randomize_gravity", True),
+        ("domain_rand.add_control_freq", True),
+        ("domain_rand.add_delay", True),]
         # [("domain_rand.randomize_friction", True)],
     ]
 
@@ -185,8 +176,10 @@ def train(args):
             if "rewards" in attr_path:
                 env.reward_scales[attr] = value
 
-    obs_shape = (48,)
-    obs_dim = 48
+    max_obs = 48 + 2 * 12
+
+    obs_shape = (max_obs,)
+    obs_dim = max_obs
     act_dim = 12
     
     num_processes = 4096
@@ -198,11 +191,11 @@ def train(args):
     buffer_actions = torch.zeros(num_steps, num_processes, act_dim, device="cpu")
     buffer_values = torch.zeros(num_steps, num_processes, 1, device="cpu")
 
-    actor_critic = load_model(model_path=TEACHER_PATH, num_obs=48, device=args.rl_device)
+    actor_critic = load_model(model_path=TEACHER_PATH, num_obs=max_obs, device=args.rl_device)
     for param in actor_critic.parameters():
         param.requires_grad = False
 
-    student_actor_critic = load_model(model_path=None, num_obs=48-3, device=args.rl_device)
+    student_actor_critic = load_model(model_path=None, num_obs=max_obs-3, device=args.rl_device)
 
     optimizer = torch.optim.Adam(student_actor_critic.parameters(), lr=3e-4)
 
