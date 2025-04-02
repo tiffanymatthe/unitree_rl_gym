@@ -11,7 +11,9 @@ class LeggedRobotNoLinVel(LeggedRobot):
                                     self.commands[:, :3] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions
+                                    self.actions,
+                                    (self.last_dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    self.last_dof_vel * self.obs_scales.dof_vel,
                                     ),dim=-1)
         # add perceptive inputs if not blind
         # add noise if needed
@@ -41,5 +43,7 @@ class LeggedRobotNoLinVel(LeggedRobot):
         noise_vec[9:9+self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
         noise_vec[9+self.num_actions:9+2*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
         noise_vec[9+2*self.num_actions:9+3*self.num_actions] = 0. # previous actions
+        noise_vec[9+3*self.num_actions:9+4*self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        noise_vec[9+4*self.num_actions:9+5*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
 
         return noise_vec

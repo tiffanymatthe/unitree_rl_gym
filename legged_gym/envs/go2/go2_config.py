@@ -23,7 +23,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         }
 
     class env(LeggedRobotCfg.env):
-        num_observations = 48 # - 3 - 3
+        num_observations = 48 + 12 * 2
 
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
@@ -115,4 +115,4 @@ class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
 
 class GO2RoughNoLinVelCfg( GO2RoughCfg ):
     class env (GO2RoughCfg.env ):
-        num_observations = 45
+        num_observations = 45 + 12*2
