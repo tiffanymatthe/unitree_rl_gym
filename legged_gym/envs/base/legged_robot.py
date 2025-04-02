@@ -195,9 +195,9 @@ class LeggedRobot(BaseTask):
         self._resample_commands(env_ids)
         self._resample_masses(env_ids)
         self._resample_motor_strengths(env_ids)
+        self._resample_motor_offset(env_ids)
         self._resample_friction(env_ids)
         self._resample_pd_gains(env_ids)
-        self._resample_gravity(env_ids)
 
         # reset buffers
         self.last_actions[env_ids] = 0.
@@ -280,10 +280,14 @@ class LeggedRobot(BaseTask):
             actor_handle = self.actor_handles[env_id]
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             for i in range(len(self.body_prop_masses)):
+                print(f"body props {self.body_prop_coms[i][0]}")
                 body_props[i].mass = self.body_prop_masses[i] # reset masses
                 body_props[i].inertia.x = self.body_prop_inerta[i][0]
                 body_props[i].inertia.y = self.body_prop_inerta[i][1]
                 body_props[i].inertia.z = self.body_prop_inerta[i][2]
+                body_props[i].com.x = self.body_prop_coms[i][0]
+                body_props[i].com.y = self.body_prop_coms[i][1]
+                body_props[i].com.z = self.body_prop_coms[i][2]
 
             body_props = self._process_rigid_body_props(body_props, env_id)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
@@ -297,19 +301,33 @@ class LeggedRobot(BaseTask):
             rigid_shape_props = self._process_rigid_shape_props(self.rigid_shape_props_asset, env_id)
             self.gym.set_asset_rigid_shape_properties(self.robot_asset, rigid_shape_props)
 
-    def _resample_gravity(self, env_ids):
+    def _resample_gravity(self, env_ids, reset=False):
         if not self.cfg.domain_rand.randomize_gravity:
             return
-        g = torch.tensor(self.cfg.sim.gravity.copy(), device=self.device)
-        a = self.cfg.domain_rand.randomize_gravity_accel
-        gravs = torch.rand((len(env_ids), 3), device=self.device) *(2*a) - a
-        gravs += g
+        g = torch.tensor(self.cfg.sim.gravity.copy(), device=self.device, requires_grad=False)
 
-        norms = torch.linalg.vector_norm(gravs, dim=1, keepdim=True)
+        if not reset:
+            a = self.cfg.domain_rand.randomize_gravity_accel
+            gravs = torch.rand((len(env_ids), 3), device=self.device, requires_grad=False) *(2*a) - a
+            gravs += g
 
-        # Normalize (avoid division by zero)
-        normalized_vectors = torch.where(norms == 0, torch.tensor(0.0, device="cuda"), gravs / norms)
-        self.gravity_vec[env_ids, :] = normalized_vectors
+            norms = torch.linalg.vector_norm(gravs, dim=1, keepdim=True)
+
+            # Normalize (avoid division by zero)
+            normalized_vectors = torch.where(norms == 0, torch.tensor(0.0, device="cuda"), gravs / norms)
+            print(self.gravity_vec[env_ids, :])
+            print("normalized")
+            print(normalized_vectors)
+            self.gravity_vec[env_ids, :] = normalized_vectors
+        else:
+            self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
+
+        sim_params = self.gym.get_sim_params(self.sim)
+        print(f"sim_params.gravity {sim_params.gravity}")
+        sim_params.gravity = gymapi.Vec3(gravs[0], gravs[1], gravs[2])
+        print(f"new sim_params.gravity: {sim_params.gravity}")
+        print(f"cfg gravity: {self.cfg.sim.gravity}")
+        self.gym.set_sim_params(self.sim, sim_params)
             
 
     def _resample_pd_gains(self, env_ids):
@@ -351,6 +369,14 @@ class LeggedRobot(BaseTask):
         self.motor_strengths[env_ids, :] = torch.rand((len(env_ids), self.num_dofs), dtype=torch.float, device=self.device,
                                                      requires_grad=False) * (
                                                   max_strength - min_strength) + min_strength
+        
+    def _resample_motor_offsets(self, env_ids):
+        if not self.cfg.domain_rand.randomize_motor_offset:
+            return
+        min_offset, max_offset = self.cfg.domain_rand.motor_offset_range
+        self.motor_offsets[env_ids, :] = torch.rand(len(env_ids), self.num_dof, dtype=torch.float,
+                                                    device=self.device, requires_grad=False) * (
+                                                    max_offset - min_offset) + min_offset
 
     def _process_rigid_shape_props(self, props, env_id):
         """ Callback allowing to store/change/randomize the rigid shape properties of each environment.
@@ -459,6 +485,11 @@ class LeggedRobot(BaseTask):
         if self.cfg.domain_rand.push_robots and (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
             self._push_robots()
 
+        if self.common_step_counter % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
+            self._resample_gravity(env_ids)
+        if int(self.common_step_counter - self.cfg.domain_rand.gravity_rand_duration) % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
+            self._randomize_gravity(torch.tensor([0, 0, 0]))
+
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
 
@@ -490,7 +521,7 @@ class LeggedRobot(BaseTask):
         actions_scaled = actions * self.cfg.control.action_scale
         control_type = self.cfg.control.control_type
         if control_type=="P":
-            torques = self.p_gains*(actions_scaled + self.default_dof_pos - self.dof_pos) - self.d_gains*self.dof_vel
+            torques = self.p_gains*(actions_scaled + self.default_dof_pos - self.dof_pos + self.motor_offsets) - self.d_gains*self.dof_vel
         elif control_type=="V":
             torques = self.p_gains*(actions_scaled - self.dof_vel) - self.d_gains*(self.dof_vel - self.last_dof_vel)/self.sim_params.dt
         elif control_type=="T":
@@ -628,6 +659,8 @@ class LeggedRobot(BaseTask):
         # Custom buffers
         self.motor_strengths = torch.ones(self.num_envs, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
         self._resample_motor_strengths(torch.arange(self.num_envs, device=self.device)) # TODO clean up
+        self.motor_offsets = torch.ones(self.num_envs, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
+        self._resample_motor_offsets(torch.arange(self.num_envs, device=self.device)) # TODO clean up
         self.p_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.d_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
       
@@ -803,6 +836,7 @@ class LeggedRobot(BaseTask):
                 self.body_prop_inerta = [np.array([gymapi.Vec3(prop.inertia.x.x, prop.inertia.x.y, prop.inertia.x.z),
                                                       gymapi.Vec3(prop.inertia.y.x, prop.inertia.y.y, prop.inertia.y.z),
                                                       gymapi.Vec3(prop.inertia.z.x, prop.inertia.z.y, prop.inertia.z.z)]) for prop in body_props]
+                self.body_prop_coms = [np.array([prop.com.x, prop.com.y, prop.com.z]) for prop in body_props]
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             self.envs.append(env_handle)

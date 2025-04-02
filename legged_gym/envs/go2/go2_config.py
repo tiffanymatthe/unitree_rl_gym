@@ -41,12 +41,20 @@ class GO2RoughCfg( LeggedRobotCfg ):
         randomize_control_freq_lambda = [125,1000]
         add_delay = False
         randomize_delay = [0, 8]
+
         randomize_stiffness = False
         randomize_stiffness_range = [0.7, 1.3]
         randomize_stiffness_range_calf = [0.7, 1.1]
         randomize_damping = False
         randomize_damping_range = [0.7, 1.3]
 
+        randomize_motor_offset = False
+        randomize_motor_offset_range = [-0.02, 0.02]
+        randomize_motor_strength = False
+        motor_strength_range = [0.9, 1.1]
+
+        gravity_rand_interval_s = 7
+        gravity_impulse_duration = 1.0
         randomize_gravity = False
         randomize_gravity_accel = 1 # +/- m/s in each direction
 
