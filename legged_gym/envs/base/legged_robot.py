@@ -488,7 +488,7 @@ class LeggedRobot(BaseTask):
         if self.common_step_counter % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
             self._resample_gravity(env_ids)
         if int(self.common_step_counter - self.cfg.domain_rand.gravity_rand_duration) % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
-            self._randomize_gravity(torch.tensor([0, 0, 0]))
+            self._resample_gravity(env_ids, reset=True)
 
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
@@ -659,7 +659,7 @@ class LeggedRobot(BaseTask):
         # Custom buffers
         self.motor_strengths = torch.ones(self.num_envs, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
         self._resample_motor_strengths(torch.arange(self.num_envs, device=self.device)) # TODO clean up
-        self.motor_offsets = torch.ones(self.num_envs, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
+        self.motor_offsets = torch.zeros(self.num_envs, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
         self._resample_motor_offsets(torch.arange(self.num_envs, device=self.device)) # TODO clean up
         self.p_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.d_gains = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
@@ -882,6 +882,7 @@ class LeggedRobot(BaseTask):
 
         self.cfg.domain_rand.push_interval = np.ceil(self.cfg.domain_rand.push_interval_s / self.dt)
         self.cfg.domain_rand.gravity_rand_interval = np.ceil(self.cfg.domain_rand.gravity_rand_interval_s / self.dt)
+        self.cfg.domain_rand.gravity_rand_duration = np.ceil(self.cfg.domain_rand.gravity_rand_interval * self.cfg.domain_rand.gravity_impulse_duration)
 
 
     #------------ reward functions----------------
