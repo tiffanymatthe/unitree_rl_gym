@@ -30,7 +30,7 @@ def play_walk(args, record_frames=False, record_name=""):
     # env_cfg.domain_rand.randomize_stiffness = True
     env_cfg.commands.ranges.lin_vel_x = [0.5,0.5]
     env_cfg.commands.ranges.lin_vel_y = [0,0]
-    env_cfg.commands.ranges.ang_vel_yaw = [0.6,0.6]
+    env_cfg.commands.ranges.ang_vel_yaw = [0,0]
     env_cfg.commands.ranges.heading = [0,0]
 
     env_cfg.env.test = True

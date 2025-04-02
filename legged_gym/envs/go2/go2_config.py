@@ -27,7 +27,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
 
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
-        friction_range = [0.05, 1.5]
+        friction_range = [0.05, 1.25]
         randomize_mass = False
         limb_mass_change_percent = 0.2 # 10%
         randomize_base_com = False
@@ -73,8 +73,8 @@ class GO2RoughCfg( LeggedRobotCfg ):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/urdf/go2.urdf'
         name = "go2"
         foot_name = "foot"
-        penalize_contacts_on = ["thigh", "calf"]
-        terminate_after_contacts_on = ["base"]
+        penalize_contacts_on = ["thigh", "hip", "calf", "base", "head"]
+        terminate_after_contacts_on = ["base", "head", "hip"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
 
     # class noise( LeggedRobotCfg.noise ):
