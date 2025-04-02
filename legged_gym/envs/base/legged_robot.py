@@ -301,34 +301,21 @@ class LeggedRobot(BaseTask):
             rigid_shape_props = self._process_rigid_shape_props(self.rigid_shape_props_asset, env_id)
             self.gym.set_asset_rigid_shape_properties(self.robot_asset, rigid_shape_props)
 
-    def _resample_gravity(self, env_ids, reset=False):
-        if not self.cfg.domain_rand.randomize_gravity:
-            return
-        g = torch.tensor(self.cfg.sim.gravity.copy(), device=self.device, requires_grad=False)
+    def _resample_gravity(self, external_force=None):
+        if external_force is not None:
+            self.gravities[:, :] = external_force.unsqueeze(0)
+        elif self.cfg.domain_rand.randomize_gravity:
+            min_gravity, max_gravity = -self.cfg.domain_rand.randomize_gravity_accel, self.cfg.domain_rand.randomize_gravity_accel
+            external_force = torch.rand(3, dtype=torch.float, device=self.device,
+                                        requires_grad=False) * (max_gravity - min_gravity) + min_gravity
 
-        if not reset:
-            a = self.cfg.domain_rand.randomize_gravity_accel
-            gravs = torch.rand((len(env_ids), 3), device=self.device, requires_grad=False) *(2*a) - a
-            gravs += g
-
-            norms = torch.linalg.vector_norm(gravs, dim=1, keepdim=True)
-
-            # Normalize (avoid division by zero)
-            normalized_vectors = torch.where(norms == 0, torch.tensor(0.0, device="cuda"), gravs / norms)
-            print(self.gravity_vec[env_ids, :])
-            print("normalized")
-            print(normalized_vectors)
-            self.gravity_vec[env_ids, :] = normalized_vectors
-        else:
-            self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
+            self.gravities[:, :] = external_force.unsqueeze(0)
 
         sim_params = self.gym.get_sim_params(self.sim)
-        print(f"sim_params.gravity {sim_params.gravity}")
-        sim_params.gravity = gymapi.Vec3(gravs[0], gravs[1], gravs[2])
-        print(f"new sim_params.gravity: {sim_params.gravity}")
-        print(f"cfg gravity: {self.cfg.sim.gravity}")
+        gravity = self.gravities[0, :] + torch.Tensor(self.cfg.sim.gravity).to(self.device)
+        self.gravity_vec[:, :] = gravity.unsqueeze(0) / torch.norm(gravity)
+        sim_params.gravity = gymapi.Vec3(gravity[0], gravity[1], gravity[2])
         self.gym.set_sim_params(self.sim, sim_params)
-            
 
     def _resample_pd_gains(self, env_ids):
         if not self.cfg.domain_rand.randomize_stiffness and not self.cfg.domain_rand.randomize_damping:
@@ -640,6 +627,7 @@ class LeggedRobot(BaseTask):
         self.common_step_counter = 0
         self.extras = {}
         self.noise_scale_vec = self._get_noise_scale_vec(self.cfg)
+        self.gravities = torch.zeros(self.num_envs, 3, dtype=torch.float, device=self.device, requires_grad=False)
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
         self._resample_gravity(torch.arange(self.num_envs, device=self.device))
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
