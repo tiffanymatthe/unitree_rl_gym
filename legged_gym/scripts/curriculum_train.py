@@ -40,7 +40,7 @@ class CurriculumTrainer():
              ("domain_rand.randomize_damping", True),
             ("domain_rand.randomize_motor_strength", True),
              ("domain_rand.randomize_motor_offset", True),
-            # ("domain_rand.randomize_gravity", True),
+            ("domain_rand.randomize_gravity", True),
             ("domain_rand.add_control_freq", True),
             ("domain_rand.add_delay", True),]
             # [("domain_rand.randomize_friction", True)],
@@ -72,7 +72,7 @@ class CurriculumTrainer():
         if self.i == 1 and not self.train_cfg.runner.resume:
             max_its = 1500
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
-        self.ppo_runner.save(os.path.join(sTrueelf.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
+        self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
 
 
     def _demo(self, record_frames=False, record_name=""):
