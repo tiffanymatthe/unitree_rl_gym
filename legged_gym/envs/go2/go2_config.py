@@ -104,7 +104,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         soft_dof_vel_limit = 0.017395 * 10
 
     class terrain( LeggedRobotCfg.terrain ):
-        plane = True
+        plane = False
         
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):

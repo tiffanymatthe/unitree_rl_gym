@@ -80,10 +80,10 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 loss_fcn = F.mse_loss
 
 # TO EDIT
-SAVE_PATH = f"logs/curr_apr_2/vel_flat"
+SAVE_PATH = f"logs/curr_apr_2/vel_terrain"
 
 # TO EDIT
-TEACHER_PATH = "logs/rough_go2/Apr02_12-36-02_vel_flat/model_900.pt"
+TEACHER_PATH = "logs/rough_go2/Apr02_13-05-51_vel_terrain/model_2000.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
