@@ -51,7 +51,7 @@ class CurriculumTrainer():
              ("domain_rand.randomize_damping", True)],
             [("domain_rand.randomize_motor_strength", True),
              ("domain_rand.randomize_motor_offset", True)],
-            [("domain_rand.randomize_gravity", True)],
+            # [("domain_rand.randomize_gravity", True)],
             [("domain_rand.add_control_freq", True)],
             [("domain_rand.add_delay", True)],
             # [("domain_rand.randomize_friction", True)],
