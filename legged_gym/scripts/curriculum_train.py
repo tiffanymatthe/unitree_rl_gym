@@ -20,40 +20,29 @@ class CurriculumTrainer():
 
         self.env.enable_viewer_sync = False
         
-        if not self.train_cfg.runner.resume:
-            self._train()  # Initial training
+        # if not self.train_cfg.runner.resume:
+        #     self._train()  # Initial training
         self.args = args
         # self._demo(True, "base")
 
         # Define curriculum modifications
         curriculum_steps = [
-            # [("commands.ranges.lin_vel_x", [0, 0.4]), # min max [m/s]
-            #  ("commands.ranges.lin_vel_y", [0, 0]),
-            #  ("commands.ranges.ang_vel_yaw", [0, 0]),
-            #  ("commands.ranges.heading", [0, 0])],
             [("rewards.scales.torques", -0.0002),
              ("rewards.scales.dof_pos_limits", -10.0),
-            #  ("rewards.scales.alive", 1),
-            #  ("rewards.scales.dof_vel_limits", -0.25),
              ("rewards.scales.tracking_lin_vel", 5),
              ("rewards.scales.tracking_ang_vel", 3),
-             ("noise.noise_scales.lin_vel", 0.2), ],
-            #  ("rewards.scales.slippage", -1e10),],
-            # [("rewards.scales.orientation", -20)], # helpful to prevent robot from falling onto its head
-            # [("rewards.scales.stand_still", -50)], # helpful to learn standing behaviors
-            # [("rewards.scales.base_height", -1000),
-            #  ("rewards.scales.feet_air_time", 75)],
-            # [("domain_rand.push_robots", True)],
-            [("domain_rand.randomize_mass", True),
+             ("noise.noise_scales.lin_vel", 0.2),
+             ("rewards.scales.orientation", -2),
+             ("domain_rand.randomize_mass", True),
              ("domain_rand.randomize_inertia", True),
-             ("domain_rand.randomize_base_com", True)],
-            [("domain_rand.randomize_stiffness", True),
-             ("domain_rand.randomize_damping", True)],
-            [("domain_rand.randomize_motor_strength", True),
-             ("domain_rand.randomize_motor_offset", True)],
-            # [("domain_rand.randomize_gravity", True)],
-            [("domain_rand.add_control_freq", True)],
-            [("domain_rand.add_delay", True)],
+             ("domain_rand.randomize_base_com", True),
+            ("domain_rand.randomize_stiffness", True),
+             ("domain_rand.randomize_damping", True),
+            ("domain_rand.randomize_motor_strength", True),
+             ("domain_rand.randomize_motor_offset", True),
+            # ("domain_rand.randomize_gravity", True),
+            ("domain_rand.add_control_freq", True),
+            ("domain_rand.add_delay", True),]
             # [("domain_rand.randomize_friction", True)],
         ]
 
@@ -83,7 +72,7 @@ class CurriculumTrainer():
         if self.i == 1 and not self.train_cfg.runner.resume:
             max_its = 1500
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
-        self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
+        self.ppo_runner.save(os.path.join(sTrueelf.ppo_runner.log_dir, f'curriculum_{self.i}_{param}.pt'))
 
 
     def _demo(self, record_frames=False, record_name=""):
