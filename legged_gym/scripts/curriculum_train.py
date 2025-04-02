@@ -20,8 +20,8 @@ class CurriculumTrainer():
 
         self.env.enable_viewer_sync = False
         
-        # if not self.train_cfg.runner.resume:
-        #     self._train()  # Initial training
+        if not self.train_cfg.runner.resume:
+            self._train()  # Initial training
         self.args = args
         # self._demo(True, "base")
 
@@ -34,7 +34,7 @@ class CurriculumTrainer():
              ("rewards.scales.tracking_lin_vel", 5),
              ("rewards.scales.tracking_ang_vel", 3),
              ("noise.noise_scales.lin_vel", 0.2),
-            ("rewards.scales.feet_air_time", 2),
+            # ("rewards.scales.feet_air_time", 2),
              ("domain_rand.randomize_mass", True),
              ("domain_rand.randomize_inertia", True),
              ("domain_rand.randomize_base_com", True),
@@ -72,6 +72,8 @@ class CurriculumTrainer():
         self.ppo_runner.env = self.env
         max_its = self.train_cfg.runner.max_iterations
         if self.i == 1:
+            max_its = 500
+        else:
             max_its = 1500
         self.ppo_runner.learn(num_learning_iterations=max_its, init_at_random_ep_len=True)
         self.ppo_runner.save(os.path.join(self.ppo_runner.log_dir, f'curriculum_{self.i}.pt'))
