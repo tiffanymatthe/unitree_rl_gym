@@ -195,7 +195,7 @@ class LeggedRobot(BaseTask):
         self._resample_commands(env_ids)
         self._resample_masses(env_ids)
         self._resample_motor_strengths(env_ids)
-        self._resample_motor_offset(env_ids)
+        self._resample_motor_offsets(env_ids)
         self._resample_friction(env_ids)
         self._resample_pd_gains(env_ids)
 
@@ -881,6 +881,7 @@ class LeggedRobot(BaseTask):
         self.max_episode_length = np.ceil(self.max_episode_length_s / self.dt)
 
         self.cfg.domain_rand.push_interval = np.ceil(self.cfg.domain_rand.push_interval_s / self.dt)
+        self.cfg.domain_rand.gravity_rand_interval = np.ceil(self.cfg.domain_rand.gravity_rand_interval_s / self.dt)
 
 
     #------------ reward functions----------------
