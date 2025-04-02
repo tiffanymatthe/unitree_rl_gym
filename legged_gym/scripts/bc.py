@@ -32,7 +32,7 @@ NUM_EPOCHS = 200
 BATCH_SIZE = 100000
 MINI_BATCH_SIZE = 512
 
-NUM_TEACHER_EPOCHS = 5
+NUM_TEACHER_EPOCHS = 10
 IGNORE_VALUE = True
 
 lin_vel_x = [-1,1] # min max [m/s]
@@ -80,10 +80,10 @@ def asymmetric_mse_loss(pred, target, reduction="mean", under_weight=2.0):
 loss_fcn = F.mse_loss
 
 # TO EDIT
-SAVE_PATH = f"logs/curr_mar_27/flat_calf_higher_friction"
+SAVE_PATH = f"logs/curr_apr_1/terrain"
 
 # TO EDIT
-TEACHER_PATH = "logs/rough_go2/Mar28_08-39-47_flat_calf_higher_friction/curriculum_6__add_delay.pt"
+TEACHER_PATH = "logs/rough_go2/Apr01_21-25-22_dr_terrain/curriculum_6__add_delay.pt"
 
 os.makedirs(SAVE_PATH, exist_ok=True)
 
@@ -157,11 +157,15 @@ def train(args):
         #  ("rewards.scales.feet_air_time", 75)],
         # [("domain_rand.push_robots", True)],
         [("domain_rand.randomize_mass", True),
-            ("domain_rand.randomize_inertia", True)],
+            ("domain_rand.randomize_inertia", True),
+            ("domain_rand.randomize_base_com", True)],
         [("domain_rand.randomize_stiffness", True),
             ("domain_rand.randomize_damping", True)],
-        [("domain_rand.add_control_freq", True)],
-        [("domain_rand.add_delay", True)],
+        [("domain_rand.randomize_motor_strength", True),
+            ("domain_rand.randomize_motor_offset", True),
+            ("domain_rand.randomize_gravity", True)],
+        [("domain_rand.add_control_freq", True),
+            ("domain_rand.add_delay", True)],
         # [("domain_rand.randomize_friction", True)],
     ]
 

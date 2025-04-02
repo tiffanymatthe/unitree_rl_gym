@@ -280,7 +280,6 @@ class LeggedRobot(BaseTask):
             actor_handle = self.actor_handles[env_id]
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             for i in range(len(self.body_prop_masses)):
-                print(f"body props {self.body_prop_coms[i][0]}")
                 body_props[i].mass = self.body_prop_masses[i] # reset masses
                 body_props[i].inertia.x = self.body_prop_inerta[i][0]
                 body_props[i].inertia.y = self.body_prop_inerta[i][1]
@@ -473,9 +472,9 @@ class LeggedRobot(BaseTask):
             self._push_robots()
 
         if self.common_step_counter % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
-            self._resample_gravity(env_ids)
+            self._resample_gravity()
         if int(self.common_step_counter - self.cfg.domain_rand.gravity_rand_duration) % int(self.cfg.domain_rand.gravity_rand_interval) == 0:
-            self._resample_gravity(env_ids, reset=True)
+            self._resample_gravity(torch.tensor([0,0,0]))
 
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
@@ -629,7 +628,7 @@ class LeggedRobot(BaseTask):
         self.noise_scale_vec = self._get_noise_scale_vec(self.cfg)
         self.gravities = torch.zeros(self.num_envs, 3, dtype=torch.float, device=self.device, requires_grad=False)
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self._resample_gravity(torch.arange(self.num_envs, device=self.device))
+        self._resample_gravity()
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)

@@ -49,7 +49,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         randomize_damping_range = [0.7, 1.3]
 
         randomize_motor_offset = False
-        randomize_motor_offset_range = [-0.02, 0.02]
+        motor_offset_range = [-0.02, 0.02]
         randomize_motor_strength = False
         motor_strength_range = [0.9, 1.1]
 
@@ -104,7 +104,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         soft_dof_vel_limit = 0.017395 * 10
 
     class terrain( LeggedRobotCfg.terrain ):
-        plane = True
+        plane = False
         
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
