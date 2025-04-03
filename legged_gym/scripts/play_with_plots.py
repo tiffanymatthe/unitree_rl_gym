@@ -34,9 +34,12 @@ def play(args):
     env_cfg.domain_rand.randomize_damping = False
     env_cfg.domain_rand.randomize_stiffness = False
 
-    env_cfg.commands.ranges.lin_vel_x = [0.5,0.5]
-    env_cfg.commands.ranges.lin_vel_y = [0,0]
-    env_cfg.commands.ranges.ang_vel_yaw = [0,0]
+    vel = [0, 0.8, 0]
+    vel_str = "_".join(map(str, vel))
+
+    env_cfg.commands.ranges.lin_vel_x = [vel[0],vel[0]]
+    env_cfg.commands.ranges.lin_vel_y = [vel[1],vel[1]]
+    env_cfg.commands.ranges.ang_vel_yaw = [vel[2],vel[2]]
     env_cfg.commands.ranges.heading = [0,0]
 
     env_cfg.env.test = True
@@ -73,6 +76,10 @@ def play(args):
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
     policy = ppo_runner.get_inference_policy(device=env.device)
+
+    if RECORD_FRAMES:
+        record_path = os.path.dirname(task_registry.resume_path) + f"/recordings_{vel_str}/"
+        ppo_runner.env.set_recorder(record_path)
     
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
@@ -92,7 +99,11 @@ def play(args):
     num_finishes = 0
     num_terminated_failed = 0
 
-    for i in tqdm(range(10 * int(env.max_episode_length))):
+    for i in tqdm(range(2 * int(env.max_episode_length))):
+        if MOVE_CAMERA:
+            x_pos = ppo_runner.env.root_states[0][0]
+            y_pos = ppo_runner.env.root_states[0][1]
+            ppo_runner.env.set_camera([x_pos,3+y_pos,1], [x_pos,0+y_pos,0.5])
 
         if (i % int(env.max_episode_length) == 0):
             # Additional Randomization
@@ -205,8 +216,13 @@ def play(args):
 
                     axs2[i].set_title(labels[i])
 
-                pickle.dump([axs, axs1, axs2], open("plot.pickle", "wb"))
+                pickle.dump([axs, axs1, axs2], open(f"{args.load_run}_{vel_str}.pickle", "wb"))
                 print("DUMPED")
+
+                # if RECORD_FRAMES:
+                #     import subprocess
+                #     rc = subprocess.call(["legged_gym/scripts/images2video.sh", f"{record_path}"])
+                #     rc = subprocess.call(["rm", "-rf", f"{record_path}"])
 
                 plt.show()
                 input("Continue by entering.")
@@ -227,8 +243,8 @@ def play(args):
     pprint.pprint(to_print)
 
 if __name__ == '__main__':
-    EXPORT_POLICY = True
-    RECORD_FRAMES = False
-    MOVE_CAMERA = False
+    EXPORT_POLICY = False
+    RECORD_FRAMES = True
+    MOVE_CAMERA = True
     args = get_args()
     play(args)
