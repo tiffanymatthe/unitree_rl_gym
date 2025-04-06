@@ -29,6 +29,16 @@ This is a simple example of using Unitree Robots for reinforcement learning, inc
 
 ### Usage
 
+## Capstone Usage
+
+1. Train initial policy with linear velocity observations. `python legged_gym/scripts/curriculum_train.py --task=go2`. Additional arguments are the same as the `train.py` script.
+
+2. Run behavior cloning to remove linear velocity. Edit the `bc.py` file with the path to the train RL policy and the path to save the behavior-cloned policy to. Make sure the same domain randomization is employed. Run `python3 legged_gym/scripts/bc.py`.
+
+3. Perform a final RL training without linear velocity. `python legged_gym/scripts/curriculum_train.py --task=go2_less --experiment_name XXX --run_name XXX --resume` where you replace experiment name and run name to match where the behavior-cloned policy is saved.
+
+## Default Unitree Usage
+
 1. Train:
    `python legged_gym/scripts/train.py --task=go2`
 
