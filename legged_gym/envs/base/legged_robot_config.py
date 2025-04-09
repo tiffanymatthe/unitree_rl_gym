@@ -10,7 +10,7 @@ class LeggedRobotCfg(BaseConfig):
         episode_length_s = 20 # episode length in seconds
         test = False
         history_length = 1 # number of previous actions to keep in the observation
-        num_observations = 48 + num_actions * history_length
+        num_observations = 48 + num_actions * (history_length+1)
 
     class terrain:
         mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh

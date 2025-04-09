@@ -24,7 +24,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
 
     class env(LeggedRobotCfg.env):
         history_length = 3
-        num_observations = 48 + LeggedRobotCfg.env.num_actions * history_length
+        num_observations = 48 + LeggedRobotCfg.env.num_actions * (history_length+1)
 
     class domain_rand(LeggedRobotCfg.domain_rand):
         randomize_friction = True
@@ -105,7 +105,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         soft_dof_vel_limit = 0.017395 * 10
 
     class terrain( LeggedRobotCfg.terrain ):
-        plane = True
+        plane = False
         
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
@@ -116,4 +116,4 @@ class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
 
 class GO2RoughNoLinVelCfg( GO2RoughCfg ):
     class env (GO2RoughCfg.env ):
-        num_observations = 45 + 12*2
+        num_observations = GO2RoughCfg.env.num_observations - 3
