@@ -11,6 +11,7 @@ import torch
 from torch import Tensor
 from typing import Tuple, Dict
 
+from legged_gym.utils.actor import Actor
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.math import wrap_to_pi
@@ -46,7 +47,26 @@ class LeggedRobot(BaseTask):
             self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
         self._init_buffers()
         self._prepare_reward_function()
+
+        if cfg.env.lin_vel_estimator_path is not None:
+            self._load_estimator()
+        else:
+            self.estimator = None
+
         self.init_done = True
+
+    def _load_estimator(self, estimator_path):
+        self.estimator = Actor(
+            num_actor_obs=self.cfg.env.num_observations - 6,
+            num_actions=3,
+            actor_hidden_dims=[256, 128],
+            activation="elu",
+            init_noise_std=1.0,
+            noise_std_type="scalar"
+        )
+
+        self.estimator.to(self.device)
+        self.estimator.load_state_dict(torch.load(estimator_path, map_location=self.device)['model_state_dict'])
 
     def _update_cfg(self, cfg=None):
         """
@@ -244,21 +264,51 @@ class LeggedRobot(BaseTask):
         """
         s = torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1).shape
         print("OBS SHAPE", s)
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-                                    self.actions,
-                                    torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * 
-                                                    self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
-                                    self.last_dof_vel * self.obs_scales.dof_vel,
-                                    ),dim=-1)
-        # add perceptive inputs if not blind
-        # add noise if needed
+
+        # create an observation without linear velocity and without command. Input to linear estimator.
+        est_obs = torch.cat((   self.base_ang_vel  * self.obs_scales.ang_vel,
+                                self.projected_gravity,
+                                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                self.dof_vel * self.obs_scales.dof_vel,
+                                self.actions,
+                                torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * 
+                                                self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
+                                self.last_dof_vel * self.obs_scales.dof_vel,
+                                ),dim=-1)
+        
         if self.add_noise:
-            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+            # add noise to the observation for the linear estimator
+            est_noise_scale_vec = torch.cat((self.noise_scale_vec[3:9], self.noise_scale_vec[12:]))
+            self.est_obs += (2 * torch.rand_like(self.est_obs) - 1) * est_noise_scale_vec
+
+        if self.estimator is None:
+            base_lin_vel = self.base_lin_vel
+        else:
+            base_lin_vel = self.estimator.act_inference(est_obs)
+
+        self.obs_buf = torch.cat((  base_lin_vel * self.obs_scales.lin_vel,
+                                    est_obs[:, 0:6],
+                                    self.commands[:, :3] * self.commands_scale,
+                                    est_obs[:, 6:],
+                                    ),dim=-1)
+
+        if self.add_noise:
+            # add noise to lin_vel and commands in self.obs_buf. The other parts already have noise added from est_obs.
+            noise_indices = torch.cat((torch.arange(0, 3, device=self.device), torch.arange(9, 12, device=self.device)))
+            self.obs_buf[:, noise_indices] += (2 * torch.rand_like(self.obs_buf[:, noise_indices]) - 1) * self.noise_scale_vec[noise_indices]
+
+        # let's not add any noise to the critic's observations
+        self.privileged_obs_buf = torch.cat((   self.base_lin_vel * self.obs_scales.lin_vel,
+                                                self.base_ang_vel  * self.obs_scales.ang_vel,
+                                                self.projected_gravity,
+                                                self.commands[:, :3] * self.commands_scale,
+                                                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                                self.dof_vel * self.obs_scales.dof_vel,
+                                                self.actions,
+                                                torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * 
+                                                                self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
+                                                self.last_dof_vel * self.obs_scales.dof_vel,
+                                                ),dim=-1)
 
     def create_sim(self):
         """ Creates simulation, terrain and evironments
