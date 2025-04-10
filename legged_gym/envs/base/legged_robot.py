@@ -644,7 +644,8 @@ class LeggedRobot(BaseTask):
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_dof_vel = torch.zeros_like(self.dof_vel)
-        self.last_dof_pos = TorchQueue(self.cfg.env.history_length, self.dof_pos.shape, dtype=torch.float, device=self.device) #torch.zeros_like(self.dof_pos)
+        self.last_dof_pos = TorchQueue(self.cfg.env.history_length, self.dof_pos.shape, dtype=torch.float, device=self.device)
+        [self.last_dof_pos.append(self.dof_pos) for _ in range(self.cfg.env.history_length,)]
         self.last_root_vel = torch.zeros_like(self.root_states[:, 7:13])
         self.commands = torch.zeros(self.num_envs, self.cfg.commands.num_commands, dtype=torch.float, device=self.device, requires_grad=False) # x vel, y vel, yaw vel, heading
         self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,) # TODO change this
