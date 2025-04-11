@@ -67,6 +67,7 @@ class LeggedRobot(BaseTask):
 
         self.estimator.to(self.device)
         self.estimator.load_state_dict(torch.load(estimator_path, map_location=self.device)['model_state_dict'])
+        self.estimator.eval()
 
     def _update_cfg(self, cfg=None):
         """
@@ -265,38 +266,6 @@ class LeggedRobot(BaseTask):
         s = torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1).shape
         print("OBS SHAPE", s)
 
-        # create an observation without linear velocity and without command. Input to linear estimator.
-        est_obs = torch.cat((   self.base_ang_vel  * self.obs_scales.ang_vel,
-                                self.projected_gravity,
-                                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                self.dof_vel * self.obs_scales.dof_vel,
-                                self.actions,
-                                torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * 
-                                                self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
-                                self.last_dof_vel * self.obs_scales.dof_vel,
-                                ),dim=-1)
-        
-        if self.add_noise:
-            # add noise to the observation for the linear estimator
-            est_noise_scale_vec = torch.cat((self.noise_scale_vec[3:9], self.noise_scale_vec[12:]))
-            self.est_obs += (2 * torch.rand_like(self.est_obs) - 1) * est_noise_scale_vec
-
-        if self.estimator is None:
-            base_lin_vel = self.base_lin_vel
-        else:
-            base_lin_vel = self.estimator.act_inference(est_obs)
-
-        self.obs_buf = torch.cat((  base_lin_vel * self.obs_scales.lin_vel,
-                                    est_obs[:, 0:6],
-                                    self.commands[:, :3] * self.commands_scale,
-                                    est_obs[:, 6:],
-                                    ),dim=-1)
-
-        if self.add_noise:
-            # add noise to lin_vel and commands in self.obs_buf. The other parts already have noise added from est_obs.
-            noise_indices = torch.cat((torch.arange(0, 3, device=self.device), torch.arange(9, 12, device=self.device)))
-            self.obs_buf[:, noise_indices] += (2 * torch.rand_like(self.obs_buf[:, noise_indices]) - 1) * self.noise_scale_vec[noise_indices]
-
         # let's not add any noise to the critic's observations
         self.privileged_obs_buf = torch.cat((   self.base_lin_vel * self.obs_scales.lin_vel,
                                                 self.base_ang_vel  * self.obs_scales.ang_vel,
@@ -309,6 +278,21 @@ class LeggedRobot(BaseTask):
                                                                 self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
                                                 self.last_dof_vel * self.obs_scales.dof_vel,
                                                 ),dim=-1)
+        
+        self.obs_buf = self.privileged_obs_buf.clone()
+        
+        if self.add_noise:
+            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+
+        # replace base_lin_vel with estimation if necessary
+        if self.estimator is not None:
+            # remove base_lin_vel and commands from the observation
+            est_obs = torch.cat((   self.obs_buf[:, 3:9],
+                                    self.obs_buf[:, 12:],
+                                    ),dim=-1)
+            base_lin_vel = self.estimator.act_inference(est_obs)
+            self.obs_buf[:, 0:3] = base_lin_vel * self.obs_scales.lin_vel
+            self.obs_buf[:, 0:3] += (2 * torch.rand_like(self.obs_buf[:, 0:3]) - 1) * self.noise_scale_vec[0:3]
 
     def create_sim(self):
         """ Creates simulation, terrain and evironments
