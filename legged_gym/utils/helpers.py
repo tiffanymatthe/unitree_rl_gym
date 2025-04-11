@@ -159,6 +159,26 @@ def export_policy_as_jit(actor_critic, path):
         traced_script_module = torch.jit.script(model)
         traced_script_module.save(path)
 
+def resolve_nn_activation(act_name: str) -> torch.nn.Module:
+    if act_name == "elu":
+        return torch.nn.ELU()
+    elif act_name == "selu":
+        return torch.nn.SELU()
+    elif act_name == "relu":
+        return torch.nn.ReLU()
+    elif act_name == "crelu":
+        return torch.nn.CELU()
+    elif act_name == "lrelu":
+        return torch.nn.LeakyReLU()
+    elif act_name == "tanh":
+        return torch.nn.Tanh()
+    elif act_name == "sigmoid":
+        return torch.nn.Sigmoid()
+    elif act_name == "identity":
+        return torch.nn.Identity()
+    else:
+        raise ValueError(f"Invalid activation function '{act_name}'.")
+
 class PolicyExporterLSTM(torch.nn.Module):
     def __init__(self, actor_critic):
         super().__init__()

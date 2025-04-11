@@ -6,8 +6,6 @@ class LeggedRobotNoLinVel(LeggedRobot):
     def compute_observations(self):
         """ Computes observations
         """
-        s = torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1).shape
-        print("OBS SHAPE", s)
         self.obs_buf = torch.cat((  self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
@@ -15,7 +13,7 @@ class LeggedRobotNoLinVel(LeggedRobot):
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
                                     torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
-                                    self.last_dof_vel * self.obs_scales.dof_vel,
+                                    torch.flatten((self.last_dof_vel.get() * self.obs_scales.dof_vel).permute(1, 0, 2), start_dim=1),
                                     ),dim=-1)
         # add perceptive inputs if not blind
         # add noise if needed

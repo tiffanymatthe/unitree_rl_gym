@@ -263,9 +263,6 @@ class LeggedRobot(BaseTask):
     def compute_observations(self):
         """ Computes observations
         """
-        s = torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1).shape
-        print("OBS SHAPE", s)
-
         # let's not add any noise to the critic's observations
         self.privileged_obs_buf = torch.cat((   self.base_lin_vel * self.obs_scales.lin_vel,
                                                 self.base_ang_vel  * self.obs_scales.ang_vel,
@@ -947,7 +944,7 @@ class LeggedRobot(BaseTask):
     
     def _reward_dof_acc(self):
         # Penalize dof accelerations
-        return torch.sum(torch.square((self.last_dof_vel.get()[:,-1] - self.dof_vel) / self.dt), dim=1)
+        return torch.sum(torch.square((self.last_dof_vel.get_latest() - self.dof_vel) / self.dt), dim=1)
     
     def _reward_action_rate(self):
         # Penalize changes in actions
