@@ -49,7 +49,7 @@ class LeggedRobot(BaseTask):
         self._prepare_reward_function()
 
         if cfg.env.lin_vel_estimator_path is not None:
-            self._load_estimator()
+            self._load_estimator(cfg.env.lin_vel_estimator_path)
         else:
             self.estimator = None
 
