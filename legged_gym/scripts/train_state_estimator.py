@@ -31,7 +31,7 @@ class Trainer:
             batch_size=1024,
             mini_batch_size=512,
             weight_decay=0.0005,
-            data_gathering_steps=1000,
+            data_gathering_steps=5000,
             num_epochs=500,
             device="cuda:0",
             args=None,
@@ -112,7 +112,6 @@ class Trainer:
                 num_critic_obs=self.policy_num_obs,
                 num_actions=self.policy_num_actions,
                 actor_hidden_dims=[512, 256, 128],
-DATA_PATH = POLICY_PATH.replace(".pt", "/state_estimator_data.dat")
                 critic_hidden_dims=[512, 256, 128],
                 activation='elu',
                 init_noise_std=1.0
@@ -194,16 +193,16 @@ DATA_PATH = POLICY_PATH.replace(".pt", "/state_estimator_data.dat")
             avg_loss = ep_action_loss.item() / L
 
             if epoch % 5 == 0:
-                for indices in validation_batches:
-                    torch.no_grad()
-                    observations_batch = observations_shaped[indices]
-                    actions_batch = actions_shaped[indices]
-                    pred_actions = self.estimator.act_inference(
-                            torch.cat((observations_batch[:, 3:9], observations_batch[:, 12:]), dim=1).to("cuda:0")
-                        )
-                    
-                    loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
-                    tqdm.write(f"Epoch {epoch}/{self.num_epochs}, Validation Loss: {loss.item():.6f}, Loss: {avg_loss:.6f}")
+                with torch.no_grad():
+                    for indices in validation_batches:
+                        observations_batch = observations_shaped[indices]
+                        actions_batch = actions_shaped[indices]
+                        pred_actions = self.estimator.act_inference(
+                                torch.cat((observations_batch[:, 3:9], observations_batch[:, 12:]), dim=1).to("cuda:0")
+                            )
+                        
+                        loss = F.mse_loss(pred_actions, actions_batch.to("cuda:0"))
+                        tqdm.write(f"Epoch {epoch}/{self.num_epochs}, Validation Loss: {loss.item():.6f}, Loss: {avg_loss:.6f}")
             
             if epoch % 25 == 0:
                 torch.save({
@@ -230,7 +229,7 @@ if __name__ == '__main__':
         batch_size=1024 * 10, # unsure about this parameter
         mini_batch_size=512,
         weight_decay=0.0005,
-        data_gathering_steps=1000,
+        data_gathering_steps=5000,
         num_epochs=250,
         device="cuda:0",
         args=args,
