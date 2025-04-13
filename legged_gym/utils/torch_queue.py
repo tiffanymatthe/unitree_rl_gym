@@ -24,6 +24,13 @@ class TorchQueue:
         #     return self.data[:self.size]
         # else:
         return torch.cat((self.data[self.start:], self.data[:self.start]), dim=0)
+    
+    def get_oldest(self):
+        return self.data[self.start]
+    
+    def get_latest(self):
+        index = (self.start + self.size - 1) % self.maxlen
+        return self.data[index]
 
     def __len__(self):
         return self.size
