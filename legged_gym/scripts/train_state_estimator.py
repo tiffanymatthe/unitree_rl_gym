@@ -73,6 +73,8 @@ class Trainer:
 
     def _load_env(self, args):
         cfg = GO2RoughCfg()
+        ppo_cfg = GO2RoughCfgPPO()
+        cfg.seed = ppo_cfg.seed
 
         curriculum_steps = [ #TODO CHANGE THIS
             [("rewards.scales.torques", -0.0002),
