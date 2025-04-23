@@ -185,7 +185,7 @@ class LeggedRobot(BaseTask):
         self.reset_idx(env_ids)
         self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
 
-        self.last_actions[:] = self.actions[:]
+        self.last_actions.append(self.actions[:])
         self.last_dof_vel.append(self.dof_vel[:])
         self.last_dof_pos.append(self.dof_pos[:])
         self.last_root_vel[:] = self.root_states[:, 7:13]
@@ -223,7 +223,7 @@ class LeggedRobot(BaseTask):
         self._resample_pd_gains(env_ids)
 
         # reset buffers
-        self.last_actions[env_ids] = 0.
+        self.last_actions.get()[:, env_ids] = 0.
         self.last_dof_vel.get()[:, env_ids] = 0.
         self.last_dof_pos.get()[:, env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
@@ -270,6 +270,8 @@ class LeggedRobot(BaseTask):
                                                 self.commands[:, :3] * self.commands_scale,
                                                 (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                                 self.dof_vel * self.obs_scales.dof_vel,
+                                                # .get() returns history from oldest to latest
+                                                torch.flatten(self.last_actions.get().permute(1, 0, 2), start_dim=1),
                                                 self.actions,
                                                 torch.flatten(((self.last_dof_pos.get() - self.default_dof_pos) * 
                                                                 self.obs_scales.dof_pos).permute(1, 0, 2), start_dim=1),
@@ -635,9 +637,9 @@ class LeggedRobot(BaseTask):
         noise_vec[9:12] = 0. # commands
         noise_vec[12:12+self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
         noise_vec[12+self.num_actions:12+2*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        noise_vec[12+2*self.num_actions:12+3*self.num_actions] = 0. # previous actions
-        noise_vec[12+3*self.num_actions:12+(3 + self.cfg.env.history_length)*self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        noise_vec[12+(3 + self.cfg.env.history_length)*self.num_actions:12+(3 + 2 * self.cfg.env.history_length)*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        noise_vec[12+2*self.num_actions:12+(2 + self.cfg.env.history_length)*self.num_actions] = 0. # previous actions
+        noise_vec[12+(2 + self.cfg.env.history_length)*self.num_actions:12+(2 + 2 * self.cfg.env.history_length)*self.num_actions] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        noise_vec[12+(2 + 2 * self.cfg.env.history_length)*self.num_actions:12+(2 + 3 * self.cfg.env.history_length)*self.num_actions] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
 
         return noise_vec
 
@@ -673,7 +675,9 @@ class LeggedRobot(BaseTask):
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
-        self.last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
+        # only need to store history length - 1 since self.actions is part of history (1 dt ago) when being used in compute_observations
+        self.last_actions = TorchQueue(self.cfg.env.history_length-1, self.actions.shape, dtype=torch.float, device=self.device)
+        [self.last_actions.append(self.actions) for _ in range(self.cfg.env.history_length-1,)]
         self.last_dof_vel = TorchQueue(self.cfg.env.history_length, self.dof_vel.shape, dtype=torch.float, device=self.device)
         [self.last_dof_vel.append(self.dof_vel) for _ in range(self.cfg.env.history_length,)]
         self.last_dof_pos = TorchQueue(self.cfg.env.history_length, self.dof_pos.shape, dtype=torch.float, device=self.device)
@@ -948,7 +952,7 @@ class LeggedRobot(BaseTask):
     
     def _reward_action_rate(self):
         # Penalize changes in actions
-        return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
+        return torch.sum(torch.square(self.last_actions.get_latest() - self.actions), dim=1)
     
     def _reward_collision(self):
         # Penalize collisions on selected bodies
