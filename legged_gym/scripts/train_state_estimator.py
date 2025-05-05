@@ -179,26 +179,30 @@ class Trainer:
     
     def get_data(self):
 
-        if os.path.exists(f"{SAVE_PATH}/dataset.h5"):
-            with h5py.File(f"{SAVE_PATH}/dataset.h5", "r") as f:
-                observations = torch.tensor(f['observations'][:])
-                labels = torch.tensor(f['labels'][:])
+        try:
+            if os.path.exists(f"{SAVE_PATH}/dataset.h5"):
+                with h5py.File(f"{SAVE_PATH}/dataset.h5", "r") as f:
+                    observations = torch.tensor(f['observations'][:])
+                    labels = torch.tensor(f['labels'][:])
 
-            # Wrap in TensorDataset
-            dataset = TensorDataset(observations, labels)
+                # Wrap in TensorDataset
+                dataset = TensorDataset(observations, labels)
 
-            train_size = int(0.8 * len(dataset))
-            val_size = len(dataset) - train_size
+                train_size = int(0.8 * len(dataset))
+                val_size = len(dataset) - train_size
 
-            # Split it randomly
-            train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-            
-            val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
-            train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-            
-            return train_loader, val_loader 
-        else:
+                # Split it randomly
+                train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+                
+                val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
+                train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+                
+                return train_loader, val_loader 
+            else:
+                return self.gather_data()
+        except:
             return self.gather_data()
+
     
 
     def train(self, args):  

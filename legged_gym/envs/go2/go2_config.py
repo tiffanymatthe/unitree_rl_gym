@@ -25,7 +25,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
     class env(LeggedRobotCfg.env):
         history_length = 3
         # doing * 3 for history length since we want to include both past joint positions, velocities and action history
-        num_observations = 48 + LeggedRobotCfg.env.num_actions * history_length * 3
+        num_observations = 36 + LeggedRobotCfg.env.num_actions * history_length * 3
         lin_vel_estimator_path = None # Will use estimator at path as input observation. If None, will use privileged linear velocity.
 
     class domain_rand(LeggedRobotCfg.domain_rand):
@@ -107,7 +107,7 @@ class GO2RoughCfg( LeggedRobotCfg ):
         soft_dof_vel_limit = 0.017395 * 10
 
     class terrain( LeggedRobotCfg.terrain ):
-        plane = False
+        plane = True
         
 class GO2RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
