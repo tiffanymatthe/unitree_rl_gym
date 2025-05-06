@@ -1,22 +1,26 @@
+from legged_gym.utils import task_registry
+import os
+import json
+
 curriculum_steps = [
-                        [ #  ("rewards.scales.orientation", -1),
-                        ("rewards.scales.base_height", 0),
-                        ("rewards.scales.torques", -0.0002),
-                        ("rewards.scales.dof_pos_limits", -10.0),
-                        ("rewards.scales.tracking_lin_vel", 5),
-                        ("rewards.scales.tracking_ang_vel", 5),
-                        ("noise.noise_scales.lin_vel", 0.2),],
-                        # ("rewards.scales.feet_air_time", 2),
-                        [("domain_rand.randomize_mass", True),
-                        ("domain_rand.randomize_inertia", True),
-                        ("domain_rand.randomize_base_com", True),],
-                        [("domain_rand.randomize_stiffness", True),
-                        ("domain_rand.randomize_damping", True),
-                        ("domain_rand.randomize_motor_strength", True),
-                        ("domain_rand.randomize_motor_offset", True),],
-                        [("domain_rand.randomize_gravity", True),
-                        ("domain_rand.add_control_freq", True),
-                        ("domain_rand.add_delay", True),],
+                        { #  ("rewards.scales.orientation", -1),
+                        "rewards.scales.base_height": 0,
+                        "rewards.scales.torques": -0.0002,
+                        "rewards.scales.dof_pos_limits": -10.0,
+                        "rewards.scales.tracking_lin_vel": 5,
+                        "rewards.scales.tracking_ang_vel": 5,
+                        "noise.noise_scales.lin_vel": 0.2,},
+                        # ("rewards.scales.feet_air_time", 2,
+                        {"domain_rand.randomize_mass": True,
+                        "domain_rand.randomize_inertia": True,
+                        "domain_rand.randomize_base_com": True,},
+                        {"domain_rand.randomize_stiffness": True,
+                        "domain_rand.randomize_damping": True,
+                        "domain_rand.randomiimport jsone_motor_strength": True,
+                        "domain_rand.randomize_motor_offset": True,},
+                        {"domain_rand.randomize_gravity": True,
+                        "domain_rand.add_control_freq": True,
+                        "domain_rand.add_delay": True,},
                     ]
 
 class CurriculumEnvManager:
@@ -25,6 +29,14 @@ class CurriculumEnvManager:
         self.steps = steps
         self.current_step = 0
         self.i = 0
+
+        save_path = f"{task_registry.log_dir}/curriculum.pkl"
+        
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        with open(save_path, "w") as f:
+            json.dump(self.steps, f)
+
+        print(f"Curriculum steps saved to {save_path}")
 
     def step(self):
         if self.current_step < len(self.steps):
