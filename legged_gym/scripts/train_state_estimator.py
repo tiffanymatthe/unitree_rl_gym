@@ -22,6 +22,7 @@ import torch
 import torch.nn.functional as F
 
 from legged_gym.utils.actor import Actor
+from legged_gym.utils import CurriculumEnvManager
 
 POLICY_PATH = "/home/lukas/rl_gym/unitree_rl_gym/logs/rough_go2/Apr22_22-20-45_/model_2300.pt" # TODO CHANGE THIS
 SAVE_PATH = POLICY_PATH.replace("model_", "state_estimator_")
@@ -76,41 +77,11 @@ class Trainer:
         ppo_cfg = GO2RoughCfgPPO()
         cfg.seed = ppo_cfg.seed
 
-        curriculum_steps = [
-            [
-             ("rewards.scales.orientation", -1),
-             ("rewards.scales.torques", -0.0002),
-             ("rewards.scales.dof_pos_limits", -10.0),
-             ("rewards.scales.tracking_lin_vel", 5),
-             ("rewards.scales.tracking_ang_vel", 3),
-             ("noise.noise_scales.lin_vel", 0.2),],
-            # ("rewards.scales.feet_air_time", 2),
-             [("domain_rand.randomize_mass", True),
-             ("domain_rand.randomize_inertia", True),
-             ("domain_rand.randomize_base_com", True),],
-             [("domain_rand.randomize_stiffness", True),
-             ("domain_rand.randomize_damping", True),
-             ("domain_rand.randomize_motor_strength", True),
-             ("domain_rand.randomize_motor_offset", True),],
-            [("domain_rand.randomize_gravity", True),
-            ("domain_rand.add_control_freq", True),
-            ("domain_rand.add_delay", True),],
-            # [("domain_rand.randomize_friction", True)],
-        ]
-
-        for attributes in curriculum_steps:
-            title = ""
-            for attr_path, value in attributes:
-                # Set attribute dynamically
-                obj = cfg
-                *parents, attr = attr_path.split(".")
-                for parent in parents:
-                    obj = getattr(obj, parent)
-                title = f"{title}_{attr}"
-                setattr(obj, attr, value)
-                print(f"SET attribute {attr_path} to {value}. TRAINING.")
-
         env, env_cfg = task_registry.make_env(name=args.task, args=args, env_cfg=cfg)
+
+        manager = CurriculumEnvManager(env)
+        manager.apply_all_steps()
+
         return env, env_cfg
     
     def load_model(self, model_path, device="cuda:0"):

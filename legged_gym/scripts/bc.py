@@ -6,9 +6,6 @@ THINGS TO EDIT BEFORE RUNNING (see TO EDIT comments in the code):
 SAVE_PATH: give a folder where the behavior-cloned policy will be saved to
 TEACHER_PATH: give the path to the teacher model
 
-curriculum_steps: make sure the environments are updated with the proper settings (randomization settings)
-- you can also comment this out and just "hardcode" the changes in go2_config.py
-
 To play the saved model (if SAVE_PATH = f"logs/curr_mar_23/dagger_delay"), run
 
 python3 legged_gym/scripts/play.py --task go2_less --experiment_name curr_mar_23 --run_name dagger_delay
@@ -17,7 +14,7 @@ python3 legged_gym/scripts/play.py --task go2_less --experiment_name curr_mar_23
 
 import isaacgym
 from legged_gym.envs import * # required to prevent circular imports
-from legged_gym.utils import get_args, task_registry
+from legged_gym.utils import get_args, task_registry, CurriculumEnvManager
 from rsl_rl.modules import ActorCritic
 
 from legged_gym.envs.go2.go2_config import GO2RoughCfg, GO2RoughCfgPPO
@@ -137,44 +134,9 @@ def train(args):
 
     env, env_cfg = task_registry.make_env(name=args.task, args=args, env_cfg=cfg)
     
-    # TO EDIT
-    curriculum_steps = [
-        [
-            ("rewards.scales.orientation", -1),
-            ("rewards.scales.torques", -0.0002),
-            ("rewards.scales.dof_pos_limits", -10.0),
-            ("rewards.scales.tracking_lin_vel", 5),
-            ("rewards.scales.tracking_ang_vel", 3),
-            ("noise.noise_scales.lin_vel", 0.2),
-        # ("rewards.scales.feet_air_time", 2),
-            ("domain_rand.randomize_mass", True),
-            ("domain_rand.randomize_inertia", True),
-            ("domain_rand.randomize_base_com", True),
-            ("domain_rand.randomize_stiffness", True),
-            ("domain_rand.randomize_damping", True),
-            ("domain_rand.randomize_motor_strength", True),
-            ("domain_rand.randomize_motor_offset", True),
-        ("domain_rand.randomize_gravity", True),
-        ("domain_rand.add_control_freq", True),
-        ("domain_rand.add_delay", True),]
-        # [("domain_rand.randomize_friction", True)],
-    ]
+    manager = CurriculumEnvManager(env)
 
-    for attributes in curriculum_steps:
-        title = ""
-        for attr_path, value in attributes:
-            # Set attribute dynamically
-            obj = env.cfg
-            *parents, attr = attr_path.split(".")
-            for parent in parents:
-                obj = getattr(obj, parent)
-            title = f"{title}_{attr}"
-            setattr(obj, attr, value)
-            env._update_cfg(env.cfg) # actually updates reward functions
-            print(f"SET attribute {attr_path} to {value}. TRAINING.")
-        
-            if "rewards" in attr_path:
-                env.reward_scales[attr] = value
+    manager.apply_all_steps()
 
     max_obs = 48 + 2 * 12
 

@@ -5,7 +5,7 @@ import sys
 
 import isaacgym
 from legged_gym.envs import *
-from legged_gym.utils import get_args, task_registry, class_to_dict
+from legged_gym.utils import get_args, task_registry, class_to_dict, CurriculumEnvManager
 from rsl_rl.runners import OnPolicyRunner
 import torch
 from tqdm import trange
@@ -18,56 +18,16 @@ class CurriculumTrainer():
         self.env, env_cfg = task_registry.make_env(name=args.task, args=args)
         self.ppo_runner, self.train_cfg = task_registry.make_alg_runner(env=self.env, name=args.task, args=args)
 
+        manager = CurriculumEnvManager(self.env)
+
         self.env.enable_viewer_sync = False
         
         if not self.train_cfg.runner.resume:
             self._train()  # Initial training
         self.args = args
-        # self._demo(True, "base")
 
-        # Define curriculum modifications
-        curriculum_steps = [
-            [
-            #  ("rewards.scales.orientation", -1),
-             ("rewards.scales.base_height", 0),
-             ("rewards.scales.torques", -0.0002),
-             ("rewards.scales.dof_pos_limits", -10.0),
-             ("rewards.scales.tracking_lin_vel", 5),
-             ("rewards.scales.tracking_ang_vel", 5),
-             ("noise.noise_scales.lin_vel", 0.2),],
-            # ("rewards.scales.feet_air_time", 2),
-            [("domain_rand.randomize_mass", True),
-             ("domain_rand.randomize_inertia", True),
-             ("domain_rand.randomize_base_com", True),],
-            [("domain_rand.randomize_stiffness", True),
-             ("domain_rand.randomize_damping", True),
-             ("domain_rand.randomize_motor_strength", True),
-             ("domain_rand.randomize_motor_offset", True),],
-            [("domain_rand.randomize_gravity", True),
-             ("domain_rand.add_control_freq", True),
-             ("domain_rand.add_delay", True),],
-            # [("domain_rand.randomize_friction", True)],
-        ]
-
-        for attributes in curriculum_steps:
-            title = ""
-            for attr_path, value in attributes:
-                # Set attribute dynamically
-                obj = self.env.cfg
-                *parents, attr = attr_path.split(".")
-                for parent in parents:
-                    obj = getattr(obj, parent)
-                title = f"{title}_{attr}"
-                setattr(obj, attr, value)
-                self.env._update_cfg(self.env.cfg) # actually updates reward functions
-                print(f"SET attribute {attr_path} to {value}. TRAINING.")
-            
-                if "rewards" in attr_path:
-                    self.env.reward_scales[attr] = value
-
-            # return
-        self._train(param=title)  # Train after each change
-            # self._demo(True, title)
+        while manager.step():
+            self._train(param=manager.get_title())
 
     def _train(self, param="base"):
         self.i+=1
@@ -86,18 +46,7 @@ class CurriculumTrainer():
             return
         
         env_cfg, train_cfg = task_registry.get_cfgs(name=self.args.task)
-        # override some parameters for testing
-        # env_cfg.env.num_envs = min(env_cfg.env.num_envs, 100)
-        # env_cfg.terrain.num_rows = 5
-        # env_cfg.terrain.num_cols = 5
         env_cfg.terrain.curriculum = False
-        # env_cfg.noise.add_noise = False
-        # env_cfg.domain_rand.randomize_friction = False
-        # env_cfg.domain_rand.push_robots = False
-        # env_cfg.domain_rand.add_control_freq = False
-        # env_cfg.domain_rand.add_delay = False
-        # env_cfg.domain_rand.randomize_damping = False
-        # env_cfg.domain_rand.randomize_stiffness = False
         env_cfg.commands.ranges.lin_vel_x = [0.3,0.9]
         env_cfg.commands.ranges.lin_vel_y = [0,0]
         env_cfg.commands.ranges.ang_vel_yaw = [0,0]
